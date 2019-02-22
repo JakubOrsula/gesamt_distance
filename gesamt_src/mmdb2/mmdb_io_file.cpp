@@ -263,7 +263,7 @@ namespace mmdb  {
     void  File::truncate ( long size )  {
     // call before reset/append
 #ifndef _WIN32
-      ::truncate ( FName,size );
+      auto rc = ::truncate ( FName,size );
 #endif
     }
 

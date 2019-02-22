@@ -186,8 +186,8 @@ namespace gsmt  {
     json      = NULL;
     nJSONs    = 0;
  
-    nValuesAlloc = NULL;
-    nJSONsAlloc  = NULL;
+    nValuesAlloc = 0;
+    nJSONsAlloc  = 0;
 
   }
 

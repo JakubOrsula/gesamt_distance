@@ -157,7 +157,7 @@ mmdb::pstr S;
   if (bckg)
     mmdb::CreateConcat ( S,bckg );
 
-  system ( S );
+  auto rc = system ( S );
 
   delete[] S;
 
