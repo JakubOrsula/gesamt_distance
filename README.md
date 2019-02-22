@@ -13,7 +13,7 @@ All the PDB files must have a name in the following format:
 
 where `<pdbid>` is a PDBID in lowercase letters.
 
-### List of files to preload
+### List of structures to preload
 When the first distance computation is issued, structures specified in this file will be preloaded. Each line of the
  file has the format: `<PDBID>:<CHAINID>`. For example:
 ```
@@ -27,7 +27,8 @@ When the first distance computation is issued, structures specified in this file
 
 ```
 $ mkdir build && cd build
-$ cmake -DCMAKE_BUILD_TYPE=Release -DPDB_DIRECTORY=<path-to-pdb-files> -DPRELOAD_LIST=<path-to-preload-list>
+$ cmake .. -DCMAKE_BUILD_TYPE=Release -DPDB_DIRECTORY=<path-to-pdb-files> -DPRELOAD_LIST=<path-to-preload-list>
+$ make
 ```
 
 Output binaries are located in `build/distance` directory.
