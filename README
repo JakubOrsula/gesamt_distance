@@ -1,0 +1,72 @@
+
+GESAMT (General Efficient Structural Alignmnet of Macromolecular Targets)
+
+Part of CCP4 Software Suite
+
+Author: Eugene Krissinel  eugene.krissinel@stfc.ac.uk
+
+
+1. Build
+
+The official build system for Gesamt is part of CCP4 Software Suite and may be
+found at
+
+http://devtools.fg.oisin.rc-harwell.ac.uk/src-readme.html
+
+However, the quickest way to build Gesamt is by issuing the following command:
+
+cd /path/to/gesamt-dist; g++ -I src src/*.cpp src/*/*.cpp -lz -O3 -o gesamt
+
+in terminal window (you may need to adjust this line depending on peculiarities
+of C++ compiler setup on your system). This will create Gesamt executable
+"gesamt" in the root of distribution directory. 
+
+
+2. Usage Instructions
+
+Run "gesamt" without parameters to get full list of options and common examples.
+
+
+3. Quick Start
+
+Suppose PDB archive be at $PDB. For making fast structural queries, it should be
+first pre-processed by Gesamt. Make a new directory for the processed archive, and
+assume it is located at $GESAMT_ARCHIVE. Then the processing is done with the
+following command:
+
+  ./gesamt --make-archive $GESAMT_ARCHIVE -pdb $PDB -npacks=N
+
+In this command, N should be set in 2**x multiples of the number of parallel
+threads that will be used in structural searches. For example, if archive will
+be used on machines with 8 cores, and all 8 cores will be used in parallel,
+then N shouod be about 16x8=128. If structural searches will be done on the
+same machine as one used for pre-processing, "-npacks" parameter may be omitted
+or set to "-npacks=auto". Larger pack numbers allow for better load ballancing
+between parallel threads, but excessive number of packs may result in a slowdown
+of file read operations. Therefore, do not make too many or too few packs; 128,
+256 and 512 should suit most situations. The pre-processing may take from few
+hours to a day depening on hardware specifications.
+
+After pre-processing, structural queries are run with the following command:
+
+  ./gesamt 1xyz.pdb -s "/1/A" -archive $GESAMT_ARCHIVE -min1=0 -min2=0 -nthreads=M -o out.txt
+
+Here, "/1/A" selects chain "A" from 1st model in input file 1xyz.pdb. Note
+that some PDB file contain several models, and some of them are numerated
+from inidces higher than 1. "-min1=0 -min2=0" make Gesamt to try every structural
+pair, even if it does not promise a reasonable-quality alignment. See the meaning
+of these parameters in Usage Instructions. "-nthreads" specifies the desirable
+number of parallel threads to use. "-nthreads=auto" will use all machine's cores,
+which may be suboptimal in case of hyperthreading. The output file, specified
+with "-o" option, will contain the list of comparisons between input chain
+and all chains in $GESAMT_ARCHIVE.
+
+Gesamt archive may be updates, rather than regenerated anew, when PDB receives
+new structures. The update is done with the following command:
+
+  ./gesamt --update-archive $GESAMT_ARCHIVE -pdb $PDB
+
+A typical update (~100 new structures) takes only a few minutes.
+
+
+
