@@ -14,10 +14,7 @@
 #include <unordered_map>
 
 #include "gesamtlib/gsmt_aligner.h"
-
-#define MAX_STRUCTURES 10
-#define LIST "/home/krab1k/Projects/ClusteringProteinChains/gesamt_modified/ids.txt"
-#define DIRECTORY "/mnt/data/ClusteringProteinChains/RawPDBs/"
+#include "config.h"
 
 
 std::string to_lower(std::string s) {
@@ -62,13 +59,8 @@ std::unordered_map<std::string, std::unique_ptr<gsmt::Structure>> preload_struct
         std::fstream file(LIST);
 
         std::string line;
-        int c = 0;
         while (std::getline(file, line)) {
             ids.push_back(line);
-            c++;
-            if (c == MAX_STRUCTURES) {
-                break;
-            }
         }
     }
     catch (std::exception &e) {
