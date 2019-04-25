@@ -12,10 +12,13 @@
 #include <stdexcept>
 #include <filesystem>
 #include <unordered_map>
+#include <mutex>
 
 #include "gesamtlib/gsmt_aligner.h"
 #include "config.h"
 
+
+std::mutex lock;
 
 std::string to_lower(std::string s) {
     std::transform(s.begin(), s.end(), s.begin(), ::tolower);
@@ -48,7 +51,9 @@ void load_single_structure(const std::string &directory, const std::string &id,
         std::cout << "Loaded: " << id << std::endl;
     }
 
+    lock.lock();
     structures.insert({id, std::move(s)});
+    lock.unlock();
 }
 
 
@@ -82,6 +87,7 @@ float get_distance(const std::string &id1, const std::string &id2) {
 
     std::cout << "Computing distance between " << id1 << " and " << id2 << std::endl;
 
+    lock.lock();
     if (structures.find(id1) == structures.end()) {
         load_single_structure(DIRECTORY, id1, structures);
     }
@@ -89,6 +95,7 @@ float get_distance(const std::string &id1, const std::string &id2) {
     if (structures.find(id2) == structures.end()) {
         load_single_structure(DIRECTORY, id2, structures);
     }
+    lock.unlock();
 
     auto Aligner = new gsmt::Aligner();
     Aligner->setPerformanceLevel(gsmt::PERFORMANCE_CODE::PERFORMANCE_Efficient);
@@ -99,8 +106,10 @@ float get_distance(const std::string &id1, const std::string &id2) {
     gsmt::PSuperposition SD;
     int matchNo;
 
+    lock.lock();
     auto s1 = structures[id1].get();
     auto s2 = structures[id2].get();
+    lock.unlock();
 
     Aligner->Align(s1, s2, false);
     Aligner->getBestMatch(SD, matchNo);
