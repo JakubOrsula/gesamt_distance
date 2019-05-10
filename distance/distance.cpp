@@ -88,14 +88,20 @@ float get_distance(const std::string &id1, const std::string &id2) {
     std::cout << "Computing distance between " << id1 << " and " << id2 << std::endl;
 
     lock.lock();
-    if (structures.find(id1) == structures.end()) {
+    auto res1 = structures.find(id1) == structures.end();
+    lock.unlock();
+
+    if (res1) {
         load_single_structure(DIRECTORY, id1, structures);
     }
 
-    if (structures.find(id2) == structures.end()) {
+    lock.lock();
+    auto res2 = structures.find(id2) == structures.end();
+    lock.unlock();
+
+    if (res2) {
         load_single_structure(DIRECTORY, id2, structures);
     }
-    lock.unlock();
 
     auto Aligner = new gsmt::Aligner();
     Aligner->setPerformanceLevel(gsmt::PERFORMANCE_CODE::PERFORMANCE_Efficient);
