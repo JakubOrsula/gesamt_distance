@@ -30,4 +30,4 @@ target_link_libraries(test_length gesamtlib stdc++fs)
 
 add_executable(calculate_matrix calculate_matrix.cpp)
 target_include_directories(calculate_matrix PUBLIC ../gesamt_src)
-target_link_libraries(calculate_matrix gesamtlib stdc++fs)
+target_link_libraries(calculate_matrix gesamtlib stdc++fs -static)

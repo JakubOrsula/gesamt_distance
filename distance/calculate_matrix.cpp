@@ -19,21 +19,12 @@ std::string to_lower(std::string s) {
     return s;
 }
 
-int main(int argc, char **argv) {
-
-    namespace fs = std::filesystem;
-
-    if (argc < 3) {
-        std::cerr << "Not enough arguments" << std::endl;
-        return 1;
-    }
-
-    std::string directory(argv[1]);
-    std::ifstream f(argv[2]);
-
-    std::string line;
+std::vector<std::tuple<std::string, std::string>> load_names(const std::string &filename) {
     std::vector<std::tuple<std::string, std::string>> data;
 
+    std::ifstream f(filename);
+
+    std::string line;
     while (std::getline(f, line)) {
 
         std::string file_path = line.substr(0, 4);
@@ -41,28 +32,48 @@ int main(int argc, char **argv) {
         data.emplace_back(file_path, chain_id);
     }
 
-    auto n = data.size();
-    std::vector<float> results(n * n, -3);
+    return data;
+}
+
+int main(int argc, char **argv) {
+
+    namespace fs = std::filesystem;
+
+    if (argc < 4) {
+        std::cerr << "Not enough arguments" << std::endl;
+        return 1;
+    }
+
+    std::string directory(argv[1]);
+    auto file1 = argv[2];
+    auto file2 = argv[3];
+
+    auto data1 = load_names(file1);
+    auto data2 = load_names(file2);
+
+    auto n = data1.size();
+    auto m = data2.size();
+    std::vector<float> results(n * m, -3);
 
 #pragma omp parallel for
-    for (size_t i = 0; i < n; i++) {
-        auto file_path1 = std::get<0>(data[i]);
-        auto chain_id1 = std::get<1>(data[i]);
+    for (auto i = 0; i < n; i++) {
+        auto file_path1 = std::get<0>(data1[i]);
+        auto chain_id1 = std::get<1>(data1[i]);
 
         auto path1 = fs::path(directory) / (to_lower(file_path1) + std::string("_updated.cif"));
         gsmt::Structure s1;
         auto info1 = s1.getStructure(path1.c_str(), chain_id1.c_str(), -1, false);
 
-        for (size_t j = 0; j < n; j++) {
-            auto file_path2 = std::get<0>(data[j]);
-            auto chain_id2 = std::get<1>(data[j]);
+        for (auto j = 0; j < m; j++) {
+            auto file_path2 = std::get<0>(data2[j]);
+            auto chain_id2 = std::get<1>(data2[j]);
 
             auto path2 = fs::path(directory) / (to_lower(file_path2) + std::string("_updated.cif"));
             gsmt::Structure s2;
             auto info2 = s2.getStructure(path2.c_str(), chain_id2.c_str(), -1, false);
 
             if (info1 or info2) {
-                results[i * n + j] = -2;
+                results[i * m + j] = -2;
                 continue;
             }
 
@@ -78,7 +89,7 @@ int main(int argc, char **argv) {
             Aligner->Align(&s1, &s2, false);
             Aligner->getBestMatch(SD, matchNo);
 
-            results[i * n + j] = SD ? SD->Q : -1;
+            results[i * m + j] = SD ? SD->Q : -1;
             delete Aligner;
         }
     }
@@ -86,8 +97,8 @@ int main(int argc, char **argv) {
     std::cout << std::fixed << std::setprecision(3);
 
     for (auto i = 0; i < n; i++) {
-        for (auto j = 0; j < n; j++) {
-            std::cout << results[i * n + j] << ", ";
+        for (auto j = 0; j < m; j++) {
+            std::cout << results[i * m + j] << ", ";
         }
         std::cout << std::endl;
     }
