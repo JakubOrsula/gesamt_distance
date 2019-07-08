@@ -1,4 +1,4 @@
-add_library(distance distance.h distance.cpp config.h.in)
+add_library(distance distance.h distance.cpp config.h.in test_length.cpp calculate_matrix.cpp)
 target_include_directories(distance PUBLIC ../gesamt_src)
 target_include_directories(distance PUBLIC ${PROJECT_BINARY_DIR}/distance)
 
@@ -18,3 +18,16 @@ add_executable(test_distance test_distance.cpp)
 target_link_libraries(test_distance distance)
 
 add_jar(java_distance ProteinDistance.java ENTRY_POINT ProteinDistance)
+
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
+
+add_executable(test_length test_length.cpp)
+target_include_directories(test_length PUBLIC ../gesamt_src)
+target_link_libraries(test_length gesamtlib stdc++fs)
+
+
+
+add_executable(calculate_matrix calculate_matrix.cpp)
+target_include_directories(calculate_matrix PUBLIC ../gesamt_src)
+target_link_libraries(calculate_matrix gesamtlib stdc++fs)
