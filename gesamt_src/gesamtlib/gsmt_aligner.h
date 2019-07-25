@@ -52,7 +52,7 @@ namespace gsmt {
 
       // s1 is the reference structure, s2 will be superposed over s1
       // (the resulting matrix to be applied to s2)
-      GSMT_CODE Align ( PStructure s1, PStructure s2, bool measure_cpu );
+      GSMT_CODE Align ( PStructure s1, PStructure s2, bool measure_cpu, float *cpu_time = nullptr);
 
       inline int getNAtoms1()  { return natoms1; }
       inline int getNAtoms2()  { return natoms2; }

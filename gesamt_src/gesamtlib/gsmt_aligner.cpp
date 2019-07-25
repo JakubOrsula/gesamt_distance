@@ -84,7 +84,7 @@ void gsmt::Aligner::setSimilarityThresholds (
 
 
 gsmt::GSMT_CODE gsmt::Aligner::Align ( PStructure s1, PStructure s2,
-                                       bool measure_cpu )  {
+                                       bool measure_cpu, float *cpu_time)  {
 mmdb::realtype clapse1,clapse2;
 clock_t        ct,ct1;
 GSMT_CODE      rc;
@@ -114,11 +114,15 @@ GSMT_CODE      rc;
 
   }
 
-  if (measure_cpu)
+  if (measure_cpu and not cpu_time)
     printf ( "\n"
            " CPU stage 1 (clustering):  %8.5f secs\n"
            " CPU stage 2 (refinement):  %8.5f secs\n",
            clapse1,clapse2 );
+
+    if (cpu_time) {
+        *cpu_time = static_cast<float>(clapse1 + clapse2);
+    }
 
   return rc;
 

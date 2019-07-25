@@ -49,6 +49,11 @@ int main(int argc, char **argv) {
     auto file1 = argv[2];
     auto file2 = argv[3];
 
+    float threshold = 0.0f;
+    if (argc == 5) {
+        threshold = atof(argv[4]);
+    }
+
     auto data1 = load_names(file1);
     auto data2 = load_names(file2);
 
@@ -61,7 +66,15 @@ int main(int argc, char **argv) {
     std::map<std::tuple<std::string, std::string>, gsmt::Structure *> structures;
 
     for (const auto &[file_path, chain_id]: all_data) {
-        if (structures.find(std::make_tuple(file_path, chain_id)) != structures.end()) {
+        structures[std::make_tuple(file_path, chain_id)] = nullptr;
+    }
+
+#pragma omp parallel for default(none) shared(all_data, structures, directory)
+    for (size_t i = 0; i < all_data.size(); i++) {
+        const auto &[file_path, chain_id] = all_data[i];
+        auto it = structures.find(std::make_tuple(file_path, chain_id));
+
+        if (it != structures.end() and it->second != nullptr) {
             continue;
         }
 
@@ -73,8 +86,9 @@ int main(int argc, char **argv) {
     }
 
     std::vector<float> results(n * m, -3);
+    std::vector<float> times(n * m, -1);
 
-#pragma omp parallel for default(none) shared(structures, data1, data2, n, m, results)
+#pragma omp parallel for default(none) shared(structures, data1, data2, n, m, results, times, threshold)
     for (size_t i = 0; i < n; i++) {
         auto s1 = structures[data1[i]];
         for (size_t j = 0; j < m; j++) {
@@ -82,17 +96,19 @@ int main(int argc, char **argv) {
 
             auto Aligner = new gsmt::Aligner();
             Aligner->setPerformanceLevel(gsmt::PERFORMANCE_CODE::PERFORMANCE_Efficient);
-            Aligner->setSimilarityThresholds(0.0, 0.0);
+            Aligner->setSimilarityThresholds(threshold, threshold);
             Aligner->setQR0(QR0_default);
             Aligner->setSigma(sigma_default);
 
             gsmt::PSuperposition SD;
             int matchNo;
 
-            Aligner->Align(s1, s2, false);
+            float time;
+            Aligner->Align(s1, s2, true, &time);
             Aligner->getBestMatch(SD, matchNo);
 
             results[i * m + j] = SD ? SD->Q : -1;
+            times[i * m + j]  = time;
             delete Aligner;
         }
     }
@@ -102,6 +118,15 @@ int main(int argc, char **argv) {
     for (size_t i = 0; i < n; i++) {
         for (size_t j = 0; j < m; j++) {
             std::cout << results[i * m + j] << ", ";
+        }
+        std::cout << std::endl;
+    }
+
+    std::cout << std::endl;
+
+    for (size_t i = 0; i < n; i++) {
+        for (size_t j = 0; j < m; j++) {
+            std::cout << times[i * m + j] << ", ";
         }
         std::cout << std::endl;
     }
