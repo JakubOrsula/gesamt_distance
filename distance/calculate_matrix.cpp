@@ -103,12 +103,12 @@ int main(int argc, char **argv) {
             gsmt::PSuperposition SD;
             int matchNo;
 
-            float time;
+            double time;
             Aligner->Align(s1, s2, true, &time);
             Aligner->getBestMatch(SD, matchNo);
 
             results[i * m + j] = SD ? SD->Q : -1;
-            times[i * m + j]  = time;
+            times[i * m + j]  = static_cast<float>(time);
             delete Aligner;
         }
     }

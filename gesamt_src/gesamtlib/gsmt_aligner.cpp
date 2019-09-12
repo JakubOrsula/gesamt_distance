@@ -83,49 +83,48 @@ void gsmt::Aligner::setSimilarityThresholds (
 }
 
 
-gsmt::GSMT_CODE gsmt::Aligner::Align ( PStructure s1, PStructure s2,
-                                       bool measure_cpu, float *cpu_time)  {
-mmdb::realtype clapse1,clapse2;
-clock_t        ct,ct1;
-GSMT_CODE      rc;
+gsmt::GSMT_CODE gsmt::Aligner::Align(PStructure s1, PStructure s2,
+                                     bool measure_cpu, double *cpu_time) {
+    GSMT_CODE rc;
+    struct timespec start, finish;
+    double elapsed1 = 0;
+    double elapsed2 = 0;
 
-  clapse1 = 0.0;
-  clapse2 = 0.0;
-  if (measure_cpu) ct = clock();
-              else ct = 0;
-
-  rc = makeSegClusters ( s1,s2 );
-  
-  if (measure_cpu)  {
-    ct1     = clock();
-    clapse1 = mmdb::realtype(ct1-ct)/CLOCKS_PER_SEC;
-    ct      = ct1;
-  }
-
-  if (rc==GSMT_Ok)  {
-
-    Refine ( s1,s2 );
-
-    if (measure_cpu)  {
-      ct1     = clock();
-      clapse2 = mmdb::realtype(ct1-ct)/CLOCKS_PER_SEC;
-      ct      = ct1;
+    if (measure_cpu) {
+        clock_gettime(CLOCK_MONOTONIC, &start);
     }
 
-  }
+    rc = makeSegClusters(s1, s2);
 
-  if (measure_cpu and not cpu_time)
-    printf ( "\n"
-           " CPU stage 1 (clustering):  %8.5f secs\n"
-           " CPU stage 2 (refinement):  %8.5f secs\n",
-           clapse1,clapse2 );
+    if (measure_cpu) {
+        clock_gettime(CLOCK_MONOTONIC, &finish);
+        elapsed1 = static_cast<double>(finish.tv_sec - start.tv_sec);
+        elapsed1 += static_cast<double>(finish.tv_nsec - start.tv_nsec) / 1000000000.0;
+        clock_gettime(CLOCK_MONOTONIC, &start);
+    }
+
+    if (rc == GSMT_Ok) {
+        Refine(s1, s2);
+
+        if (measure_cpu) {
+            clock_gettime(CLOCK_MONOTONIC, &finish);
+            elapsed2 = static_cast<double>(finish.tv_sec - start.tv_sec);
+            elapsed2 += static_cast<double>(finish.tv_nsec - start.tv_nsec) / 1000000000.0;
+        }
+
+    }
+
+    if (measure_cpu and not cpu_time)
+        printf("\n"
+               " CPU stage 1 (clustering):  %8.5f secs\n"
+               " CPU stage 2 (refinement):  %8.5f secs\n",
+               elapsed1, elapsed2);
 
     if (cpu_time) {
-        *cpu_time = static_cast<float>(clapse1 + clapse2);
+        *cpu_time = elapsed1 + elapsed2;
     }
 
-  return rc;
-
+    return rc;
 }
 
 
