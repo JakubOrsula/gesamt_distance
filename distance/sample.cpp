@@ -149,10 +149,10 @@ int main(int argc, char **argv) {
     for(const auto &[id1, id2, size1, size2, Qs, times]: results) {
         cout << setw(7) << id1 << " " << setw(7) << id2 << " " << setw(4) << size1 << " " << setw(4) << size2 << " ";
         for (const auto Q: Qs) {
-            cout << fixed << setprecision(3) << Q << " ";
+            cout << fixed << setw(6) << setprecision(3) << Q << " ";
         }
         for (const auto time: times) {
-            cout << fixed << setprecision(4) << time << " ";
+            cout << fixed << setw(6) << setprecision(4) << time << " ";
         }
         cout << endl;
     }
