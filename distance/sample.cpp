@@ -108,7 +108,7 @@ int main(int argc, char **argv) {
 
     results.resize(data.size());
 
-//#pragma omp parallel for default(none) shared(data, directory, thresholds, results)
+#pragma omp parallel for default(none) shared(data, directory, thresholds, results)
     for (int i = 0; i < data.size(); i++) {
         const auto &[pdb_id1, chain_id1, pdb_id2, chain_id2] = data[i];
 
@@ -147,13 +147,14 @@ int main(int argc, char **argv) {
     }
 
     for(const auto &[id1, id2, size1, size2, Qs, times]: results) {
-        cout << id1 << " " << id2 << " " << setw(4) << size1 << " " << size2 << " ";
+        cout << setw(7) << id1 << " " << setw(7) << id2 << " " << setw(4) << size1 << " " << setw(4) << size2 << " ";
         for (const auto Q: Qs) {
             cout << fixed << setprecision(3) << Q << " ";
         }
         for (const auto time: times) {
             cout << fixed << setprecision(4) << time << " ";
         }
+        cout << endl;
     }
 
     return 0;
