@@ -17,6 +17,9 @@ target_link_libraries(ProteinDistance distance pthread z stdc++fs)
 add_executable(test_distance test_distance.cpp)
 target_link_libraries(test_distance distance)
 
+add_executable(sample sample.cpp)
+target_link_libraries(sample gesamtlib stdc++fs -static)
+
 add_jar(java_distance ProteinDistance.java ENTRY_POINT ProteinDistance)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
