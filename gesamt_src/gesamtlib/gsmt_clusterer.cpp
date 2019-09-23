@@ -102,6 +102,7 @@ void gsmt::Clusterer::initClusterer()  {
   nClusters = 0;      // number of clusters;
   nClAlloc  = 0;      // length of allocated cluster array
 
+  stop = false;
 }
 
 void gsmt::Clusterer::freeMemory()  {
@@ -505,6 +506,9 @@ bool          B;
   clusterID = 0;
 
   for (i1=0;i1<nseg1;i1++)  {
+      if (stop) {
+          return GSMT_UserError;
+      }
     for (i2=0;i2<nseg2;i2++)  {
       n = i1 - i2;
       if ((!sid[i1][i2]) && (nseg1-n>=minMatch) && (nseg2+n>=minMatch)) {

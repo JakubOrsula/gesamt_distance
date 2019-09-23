@@ -27,17 +27,13 @@ When the first distance computation is issued, structures specified in this file
 
 ```
 $ mkdir build && cd build
-$ cmake .. -DCMAKE_BUILD_TYPE=Release -DPDB_DIRECTORY=<path-to-pdb-files> -DPRELOAD_LIST=<path-to-preload-list>
+$ cmake .. -DCMAKE_BUILD_TYPE=Release -DPDB_DIRECTORY=<path-to-mmcif-files> -DPRELOAD_LIST=<path-to-preload-list>
 $ make
 ```
 
 Output binaries are located in `build/distance` directory.
 
-## Testing library from C++
-Simply run `test_distance` in the `build/distance` directory.
-
-
-## Testing library from Java
+## Testing the library
 `LD_LIBRARY_PATH` must be set correctly for Java to find the shared library `libProteinDistance.so`.
 
 ```

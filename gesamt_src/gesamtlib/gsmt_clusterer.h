@@ -44,7 +44,9 @@ namespace gsmt  {
       Clusterer ();
       Clusterer ( mmdb::io::RPStream Object );
       ~Clusterer();
-      
+
+      bool stop;
+
       inline mmdb::PPAtom getCalphas1() const { return A1; }
       inline mmdb::PPAtom getCalphas2() const { return A2; }
       
