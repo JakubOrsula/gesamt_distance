@@ -6,10 +6,10 @@ Distance is computed as 1 - Q-Score. If computation fails (structures are too di
 Cmake, C++17 compiler (for `<filesystem>`), pthreads, zlib, Java JDK.
 
 
-### Directory with PDB files
-All the PDB files must have a name in the following format:
+### Directory with mmCIF files
+All the mmCIF files must have a name in the following format:
 
-`pdb<pdbid>.ent`
+`<pdbid>_updated.cif`
 
 where `<pdbid>` is a PDBID in lowercase letters.
 
