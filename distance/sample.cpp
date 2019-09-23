@@ -35,8 +35,7 @@ string to_lower(string s) {
 }
 
 
-void split(const string &str, vector<string> &cont)
-{
+void split(const string &str, vector<string> &cont) {
     auto pos = str.find(' ');
     cont.push_back(str.substr(0, 4));
     cont.push_back(str.substr(5, pos - 5));
@@ -108,7 +107,9 @@ int main(int argc, char **argv) {
 
     results.resize(data.size());
 
-#pragma omp parallel for default(none) shared(data, directory, thresholds, results)
+    int done = 0;
+
+#pragma omp parallel for default(none) shared(data, directory, thresholds, results, done, count, cerr)
     for (int i = 0; i < data.size(); i++) {
         const auto &[pdb_id1, chain_id1, pdb_id2, chain_id2] = data[i];
 
@@ -144,15 +145,22 @@ int main(int argc, char **argv) {
 
         delete s1;
         delete s2;
+
+#pragma omp atomic
+        done++;
+
+        if (omp_get_thread_num() == 0) {
+            cerr << "Progress: " << fixed << setprecision(4) << static_cast<double>(done) / data.size() << endl;
+        }
     }
 
-    for(const auto &[id1, id2, size1, size2, Qs, times]: results) {
+    for (const auto &[id1, id2, size1, size2, Qs, times]: results) {
         cout << setw(7) << id1 << " " << setw(7) << id2 << " " << setw(4) << size1 << " " << setw(4) << size2 << " ";
         for (const auto Q: Qs) {
-            cout << fixed << setprecision(3) << Q << " ";
+            cout << fixed << setw(6) << setprecision(3) << Q << " ";
         }
         for (const auto time: times) {
-            cout << fixed << setprecision(4) << time << " ";
+            cout << fixed << setw(6) << setprecision(4) << time << " ";
         }
         cout << endl;
     }
