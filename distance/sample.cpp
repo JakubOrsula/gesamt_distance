@@ -109,7 +109,7 @@ int main(int argc, char **argv) {
 
     int done = 0;
 
-#pragma omp parallel for default(none) shared(data, directory, thresholds, results, done, count, cerr)
+#pragma omp parallel for default(none) shared(data, directory, thresholds, results, done, cerr)
     for (int i = 0; i < data.size(); i++) {
         const auto &[pdb_id1, chain_id1, pdb_id2, chain_id2] = data[i];
 
