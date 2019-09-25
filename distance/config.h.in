@@ -1,8 +1,0 @@
-//
-// Created by krab1k on 22.2.19.
-//
-
-#pragma once
-
-#define LIST "@PRELOAD_LIST@"
-#define DIRECTORY "@PDB_DIRECTORY@"

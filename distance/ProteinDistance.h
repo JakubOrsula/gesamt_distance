@@ -15,6 +15,14 @@ extern "C" {
 JNIEXPORT jfloat JNICALL Java_ProteinDistance_getDistance
   (JNIEnv *, jobject, jstring, jstring, jfloat);
 
+/*
+ * Class:     ProteinDistance
+ * Method:    init
+ * Signature: (Ljava/lang/String;Ljava/lang/String;ZD)V
+ */
+JNIEXPORT void JNICALL Java_ProteinDistance_init
+  (JNIEnv *, jobject, jstring, jstring, jboolean, jdouble);
+
 #ifdef __cplusplus
 }
 #endif

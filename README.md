@@ -27,7 +27,7 @@ When the first distance computation is issued, structures specified in this file
 
 ```
 $ mkdir build && cd build
-$ cmake .. -DCMAKE_BUILD_TYPE=Release -DPDB_DIRECTORY=<path-to-mmcif-files> -DPRELOAD_LIST=<path-to-preload-list>
+$ cmake ..
 $ make
 ```
 

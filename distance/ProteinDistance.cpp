@@ -1,6 +1,5 @@
 #include <thread>
 #include <future>
-#include <cstdio>
 #include <string>
 #include <vector>
 #include <memory>
@@ -8,49 +7,52 @@
 #include <algorithm>
 #include <iostream>
 #include <sstream>
-#include <stdexcept>
-#include <filesystem>
 #include <unordered_map>
 #include <mutex>
 #include <set>
 
 #include "ProteinDistance.h"
 #include "gesamtlib/gsmt_aligner.h"
-#include "config.h"
 
-
+bool binary = false;
+double threshold;
+std::string directory;
+std::string preload_list;
 std::mutex lock;
+
+std::set<std::string> ids;
+std::unordered_map<std::string, std::unique_ptr<gsmt::Structure>> structures;
+
 
 std::string to_lower(std::string s) {
     std::transform(s.begin(), s.end(), s.begin(), ::tolower);
     return s;
 }
 
-void load_single_structure(const std::string &directory, const std::string &id,
-                           std::unordered_map<std::string, std::unique_ptr<gsmt::Structure>> &structures) {
+void load_single_structure(const std::string &id) {
 
-    namespace fs = std::filesystem;
-
-    auto pos = id.find(':');
-    auto pdbid = id.substr(0, pos);
-    auto chain = id.substr(pos + 1);
+    mmdb::io::File file;
 
     auto s = std::make_unique<gsmt::Structure>();
 
     std::stringstream ss;
-    ss << to_lower(pdbid) << "_updated.cif";
-
-    auto filepath = fs::path(directory) / ss.str();
-
-    auto status = s->getStructure(filepath.c_str(), chain.c_str(), -1, false);
-    s->prepareStructure(0);
-
-    if (status) {
-        std::cout << "Could not load " << filepath << ": " << chain << std::endl;
-        throw std::runtime_error("Loading of structure failed");
+    if (binary) {
+        ss << directory << "/" << to_lower(id.substr(0, 2)) << "/" << id << ".bin";
+        file.assign(ss.str().c_str());
+        file.reset();
+        s->read(file);
+        file.shut();
     } else {
-        std::cout << "Loaded: " << id << std::endl;
+        auto pos = id.find(':');
+        auto pdbid = id.substr(0, pos);
+        auto chain = id.substr(pos + 1);
+        ss << directory << "/" << to_lower(id.substr(0, 2)) << "/" << to_lower(pdbid) << "_updated.cif";
+        s->getStructure(ss.str().c_str(), chain.c_str(), -1, false);
     }
+#ifndef NDEBUG
+    std::cout << "Loaded: " << id << " from: " << ss.str() << std::endl;
+#endif
+    s->prepareStructure(0);
 
     lock.lock();
     structures.insert({id, std::move(s)});
@@ -58,18 +60,20 @@ void load_single_structure(const std::string &directory, const std::string &id,
 }
 
 
-std::unordered_map<std::string, std::unique_ptr<gsmt::Structure>> preload_structures(const std::set<std::string> &ids) {
-    std::unordered_map<std::string, std::unique_ptr<gsmt::Structure>> structures;
-    for (const auto &id: ids) {
-        load_single_structure(DIRECTORY, id, structures);
-    }
-    return structures;
-}
+JNIEXPORT void JNICALL Java_ProteinDistance_init(JNIEnv *env, jobject, jstring j_directory, jstring j_list,
+        jboolean j_binary, jdouble j_threshold) {
+    const char *c_directory = env->GetStringUTFChars(j_directory, nullptr);
+    const char *c_list = env->GetStringUTFChars(j_list, nullptr);
+    directory = std::string(c_directory);
+    preload_list = std::string(c_list);
+    binary = static_cast<bool>(j_binary);
+    threshold = j_threshold;
+    env->ReleaseStringChars(j_directory, nullptr);
+    env->ReleaseStringChars(j_list, nullptr);
 
-std::set<std::string> load_ids() {
-    std::set<std::string> ids;
+    /* Populate pivots */
     try {
-        std::fstream file(LIST);
+        std::fstream file(preload_list);
 
         std::string line;
         while (std::getline(file, line)) {
@@ -79,7 +83,11 @@ std::set<std::string> load_ids() {
     catch (std::exception &e) {
         std::cout << e.what() << std::endl;
     }
-    return ids;
+
+    /* Preload structures */
+    for (const auto &id: ids) {
+        load_single_structure(id);
+    }
 }
 
 
@@ -92,17 +100,16 @@ Java_ProteinDistance_getDistance(JNIEnv *env, jobject, jstring o1id, jstring o2i
     std::string id1 = std::string(o1s);
     std::string id2 = std::string(o2s);
 
-    static auto ids = load_ids();
-    static auto structures = preload_structures(ids);
-
-    std::cout << "Computing distance between " << id1 << " and " << id2 << std::endl;
+#ifndef NDEBUG
+    std::cout << "Distance between " << id1 << " and " << id2 << std::endl;
+#endif
 
     lock.lock();
     auto res1 = structures.find(id1) == structures.end();
     lock.unlock();
 
     if (res1) {
-        load_single_structure(DIRECTORY, id1, structures);
+        load_single_structure(id1);
     }
 
     lock.lock();
@@ -110,12 +117,12 @@ Java_ProteinDistance_getDistance(JNIEnv *env, jobject, jstring o1id, jstring o2i
     lock.unlock();
 
     if (res2) {
-        load_single_structure(DIRECTORY, id2, structures);
+        load_single_structure(id2);
     }
 
     auto Aligner = new gsmt::Aligner();
     Aligner->setPerformanceLevel(gsmt::PERFORMANCE_CODE::PERFORMANCE_Efficient);
-    Aligner->setSimilarityThresholds(0.0, 0.0);
+    Aligner->setSimilarityThresholds(threshold, threshold);
     Aligner->setQR0(QR0_default);
     Aligner->setSigma(sigma_default);
 
@@ -152,11 +159,15 @@ Java_ProteinDistance_getDistance(JNIEnv *env, jobject, jstring o1id, jstring o2i
 
     lock.lock();
     if (ids.find(id1) == ids.end()) {
+#ifndef NDEBUG
         std::cout << "Unloading " << id1 << std::endl;
+#endif
         structures.erase(id1);
     }
     if (ids.find(id2) == ids.end()) {
+#ifndef NDEBUG
         std::cout << "Unloading " << id2 << std::endl;
+#endif
         structures.erase(id2);
     }
     lock.unlock();
