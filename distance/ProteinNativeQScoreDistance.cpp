@@ -1,3 +1,7 @@
+//
+// Created by krab1k on 2020-01-08.
+//
+
 #include <thread>
 #include <future>
 #include <string>
@@ -11,7 +15,7 @@
 #include <mutex>
 #include <set>
 
-#include "ProteinDistance.h"
+#include "ProteinNativeQScoreDistance.h"
 #include "gesamtlib/gsmt_aligner.h"
 
 bool binary = false;
@@ -60,8 +64,10 @@ void load_single_structure(const std::string &id) {
 }
 
 
-JNIEXPORT void JNICALL Java_ProteinDistance_init(JNIEnv *env, jobject, jstring j_directory, jstring j_list,
-        jboolean j_binary, jdouble j_threshold) {
+JNIEXPORT void JNICALL Java_messif_distance_impl_ProteinNativeQScoreDistance_init(JNIEnv *env, jobject,
+                                                                                  jstring j_directory, jstring j_list,
+                                                                                  jboolean j_binary,
+                                                                                  jdouble j_threshold) {
     const char *c_directory = env->GetStringUTFChars(j_directory, nullptr);
     const char *c_list = env->GetStringUTFChars(j_list, nullptr);
     directory = std::string(c_directory);
@@ -92,7 +98,8 @@ JNIEXPORT void JNICALL Java_ProteinDistance_init(JNIEnv *env, jobject, jstring j
 
 
 JNIEXPORT jfloat JNICALL
-Java_ProteinDistance_getDistance(JNIEnv *env, jobject, jstring o1id, jstring o2id, jfloat timeThresholdInSeconds) {
+Java_messif_distance_impl_ProteinNativeQScoreDistance_getNativeDistance(JNIEnv *env, jobject, jstring o1id,
+                                                                        jstring o2id, jfloat timeThresholdInSeconds) {
 
     const char *o1s = env->GetStringUTFChars(o1id, nullptr);
     const char *o2s = env->GetStringUTFChars(o2id, nullptr);
@@ -134,7 +141,7 @@ Java_ProteinDistance_getDistance(JNIEnv *env, jobject, jstring o1id, jstring o2i
     auto s2 = structures[id2].get();
     lock.unlock();
 
-    std::future<void> future = std::async(std::launch::async,[&]{
+    std::future<void> future = std::async(std::launch::async, [&] {
         Aligner->Align(s1, s2, false);
     });
 
