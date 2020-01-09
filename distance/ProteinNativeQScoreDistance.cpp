@@ -64,7 +64,7 @@ void load_single_structure(const std::string &id) {
 }
 
 
-JNIEXPORT void JNICALL Java_messif_distance_impl_ProteinNativeQScoreDistance_init(JNIEnv *env, jobject,
+JNIEXPORT void JNICALL Java_messif_distance_impl_ProteinNativeQScoreDistance_init(JNIEnv *env, jclass,
                                                                                   jstring j_directory, jstring j_list,
                                                                                   jboolean j_binary,
                                                                                   jdouble j_threshold) {
