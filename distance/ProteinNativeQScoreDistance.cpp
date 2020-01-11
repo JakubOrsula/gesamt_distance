@@ -22,10 +22,9 @@ bool binary = false;
 double threshold;
 std::string directory;
 std::string preload_list;
-std::mutex lock;
 
-std::set<std::string> ids;
-std::unordered_map<std::string, std::unique_ptr<gsmt::Structure>> structures;
+std::set<std::string> pivots;
+std::unordered_map<std::string, std::shared_ptr<gsmt::Structure>> structures;
 
 
 std::string to_lower(std::string s) {
@@ -33,11 +32,12 @@ std::string to_lower(std::string s) {
     return s;
 }
 
-void load_single_structure(const std::string &id) {
+
+std::shared_ptr<gsmt::Structure> load_single_structure(const std::string &id) {
 
     mmdb::io::File file;
 
-    auto s = std::make_unique<gsmt::Structure>();
+    auto s = std::make_shared<gsmt::Structure>();
 
     std::stringstream ss;
     if (binary) {
@@ -58,9 +58,16 @@ void load_single_structure(const std::string &id) {
 #endif
     s->prepareStructure(0);
 
-    lock.lock();
-    structures.insert({id, std::move(s)});
-    lock.unlock();
+    return s;
+}
+
+
+void load_pivots() {
+    /* Preload structures */
+    for (const auto &id: pivots) {
+        auto s = load_single_structure(id);
+        structures.insert({id, std::move(s)});
+    }
 }
 
 
@@ -83,17 +90,14 @@ JNIEXPORT void JNICALL Java_messif_distance_impl_ProteinNativeQScoreDistance_ini
 
         std::string line;
         while (std::getline(file, line)) {
-            ids.insert(line);
+            pivots.insert(line);
         }
     }
     catch (std::exception &e) {
         std::cout << e.what() << std::endl;
     }
 
-    /* Preload structures */
-    for (const auto &id: ids) {
-        load_single_structure(id);
-    }
+    load_pivots();
 }
 
 
@@ -111,20 +115,19 @@ Java_messif_distance_impl_ProteinNativeQScoreDistance_getNativeDistance(JNIEnv *
     std::cout << "Distance between " << id1 << " and " << id2 << std::endl;
 #endif
 
-    lock.lock();
-    auto res1 = structures.find(id1) == structures.end();
-    lock.unlock();
+    std::shared_ptr<gsmt::Structure> s1;
+    std::shared_ptr<gsmt::Structure> s2;
 
-    if (res1) {
-        load_single_structure(id1);
+    if (structures.find(id1) != structures.end()) {
+        s1 = structures[id1];
+    } else {
+        s1 = load_single_structure(id1);
     }
 
-    lock.lock();
-    auto res2 = structures.find(id2) == structures.end();
-    lock.unlock();
-
-    if (res2) {
-        load_single_structure(id2);
+    if (structures.find(id2) != structures.end()) {
+        s2 = structures[id2];
+    } else {
+        s2 = load_single_structure(id2);
     }
 
     auto Aligner = new gsmt::Aligner();
@@ -136,13 +139,8 @@ Java_messif_distance_impl_ProteinNativeQScoreDistance_getNativeDistance(JNIEnv *
     gsmt::PSuperposition SD;
     int matchNo;
 
-    lock.lock();
-    auto s1 = structures[id1].get();
-    auto s2 = structures[id2].get();
-    lock.unlock();
-
     std::future<void> future = std::async(std::launch::async, [&] {
-        Aligner->Align(s1, s2, false);
+        Aligner->Align(s1.get(), s2.get(), false);
     });
 
     auto timeout = static_cast<long>(timeThresholdInSeconds * 1000);
@@ -164,23 +162,9 @@ Java_messif_distance_impl_ProteinNativeQScoreDistance_getNativeDistance(JNIEnv *
 
     delete Aligner;
 
-    lock.lock();
-    if (ids.find(id1) == ids.end()) {
-#ifndef NDEBUG
-        std::cout << "Unloading " << id1 << std::endl;
-#endif
-        structures.erase(id1);
-    }
-    if (ids.find(id2) == ids.end()) {
-#ifndef NDEBUG
-        std::cout << "Unloading " << id2 << std::endl;
-#endif
-        structures.erase(id2);
-    }
-    lock.unlock();
-
     env->ReleaseStringChars(o1id, nullptr);
     env->ReleaseStringChars(o1id, nullptr);
 
     return distance;
 }
+
