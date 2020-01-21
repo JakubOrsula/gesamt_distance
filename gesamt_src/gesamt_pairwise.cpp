@@ -614,7 +614,7 @@ bool                  crystQ,crystT,isOutput;
 
   Aligner = new gsmt::Aligner();
   Aligner->setPerformanceLevel     ( Input.mode  );
-  Aligner->setSimilarityThresholds ( 0.0,0.0     );
+  Aligner->setSimilarityThresholds ( 0.6,0.6     );
   Aligner->setQR0                  ( Input.QR0   );
   Aligner->setSigma                ( Input.sigma );
 

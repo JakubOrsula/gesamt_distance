@@ -22,3 +22,6 @@ target_link_libraries(get_sizes gesamtlib stdc++fs -static)
 
 add_executable(chain2bin chain2bin.cpp)
 target_link_libraries(chain2bin gesamtlib stdc++)
+
+add_executable(test_parallel test_parallel.cpp protein_distance.h)
+target_link_libraries(test_parallel ProteinDistance)

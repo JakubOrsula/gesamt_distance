@@ -5,6 +5,7 @@
 #include <thread>
 #include <future>
 #include <string>
+#include <utility>
 #include <vector>
 #include <memory>
 #include <fstream>
@@ -25,6 +26,8 @@ std::string preload_list;
 
 std::set<std::string> pivots;
 std::unordered_map<std::string, std::shared_ptr<gsmt::Structure>> structures;
+
+std::mutex lock;
 
 
 std::string to_lower(std::string s) {
@@ -56,7 +59,7 @@ std::shared_ptr<gsmt::Structure> load_single_structure(const std::string &id) {
 #ifndef NDEBUG
     std::cout << "Loaded: " << id << " from: " << ss.str() << std::endl;
 #endif
-    s->prepareStructure(0);
+    s->prepareStructure(7.0);
 
     return s;
 }
@@ -71,18 +74,12 @@ void load_pivots() {
 }
 
 
-JNIEXPORT void JNICALL Java_messif_distance_impl_ProteinNativeQScoreDistance_init(JNIEnv *env, jclass,
-                                                                                  jstring j_directory, jstring j_list,
-                                                                                  jboolean j_binary,
-                                                                                  jdouble j_threshold) {
-    const char *c_directory = env->GetStringUTFChars(j_directory, nullptr);
-    const char *c_list = env->GetStringUTFChars(j_list, nullptr);
-    directory = std::string(c_directory);
-    preload_list = std::string(c_list);
-    binary = static_cast<bool>(j_binary);
-    threshold = j_threshold;
-    env->ReleaseStringChars(j_directory, nullptr);
-    env->ReleaseStringChars(j_list, nullptr);
+void init_library(const std::string &archive_directory, const std::string &pivot_list, bool binary_archive,
+                  double approximation_threshold) {
+    directory = archive_directory;
+    preload_list = pivot_list;
+    binary = binary_archive;
+    threshold = approximation_threshold;
 
     /* Populate pivots */
     try {
@@ -98,6 +95,65 @@ JNIEXPORT void JNICALL Java_messif_distance_impl_ProteinNativeQScoreDistance_ini
     }
 
     load_pivots();
+}
+
+
+float get_distance(const std::string& id1, const std::string &id2) {
+
+    std::shared_ptr<gsmt::Structure> s1;
+    std::shared_ptr<gsmt::Structure> s2;
+
+    lock.lock();
+    if (structures.find(id1) != structures.end()) {
+        s1 = structures[id1];
+    } else {
+        s1 = load_single_structure(id1);
+    }
+    lock.unlock();
+
+    lock.lock();
+    if (structures.find(id2) != structures.end()) {
+        s2 = structures[id2];
+    } else {
+        s2 = load_single_structure(id2);
+    }
+    lock.unlock();
+
+    auto Aligner = std::make_unique<gsmt::Aligner>();
+    Aligner->setPerformanceLevel(gsmt::PERFORMANCE_CODE::PERFORMANCE_Efficient);
+    Aligner->setSimilarityThresholds(threshold, threshold);
+    Aligner->setQR0(QR0_default);
+    Aligner->setSigma(sigma_default);
+
+    gsmt::PSuperposition SD;
+    int matchNo;
+
+    Aligner->Align(s1.get(), s2.get(), false);
+    Aligner->getBestMatch(SD, matchNo);
+
+    float distance;
+    if (SD) {
+        distance = 1 - static_cast<float>(SD->Q);
+    } else {
+        distance = 2;
+    }
+
+    return distance;
+}
+
+
+JNIEXPORT void JNICALL Java_messif_distance_impl_ProteinNativeQScoreDistance_init(JNIEnv *env, jclass,
+                                                                                  jstring j_directory, jstring j_list,
+                                                                                  jboolean j_binary,
+                                                                                  jdouble j_threshold) {
+    const char *c_directory = env->GetStringUTFChars(j_directory, nullptr);
+    const char *c_list = env->GetStringUTFChars(j_list, nullptr);
+
+    init_library(std::string(c_directory), std::string(c_list), static_cast<bool>(j_binary), j_threshold);
+
+    env->ReleaseStringChars(j_directory, nullptr);
+    env->ReleaseStringChars(j_list, nullptr);
+
 }
 
 
@@ -143,6 +199,7 @@ Java_messif_distance_impl_ProteinNativeQScoreDistance_getNativeDistance(JNIEnv *
         Aligner->Align(s1.get(), s2.get(), false);
     });
 
+    timeThresholdInSeconds = 0.6f;
     auto timeout = static_cast<long>(timeThresholdInSeconds * 1000);
     std::future_status status = future.wait_for(std::chrono::milliseconds(timeout));
 
