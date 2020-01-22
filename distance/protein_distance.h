@@ -11,4 +11,4 @@ void init_library(const std::string &archive_directory, const std::string &pivot
                   double approximation_threshold);
 
 
-float get_distance(const std::string& id1, const std::string &id2);
+float get_distance(const std::string& id1, const std::string &id2, float time_threshold);

@@ -150,9 +150,12 @@ int  i,min_size;
 
     min_size = mmdb::mround ( refineDepth*Cluster[0]->n );
 
-    for (i=0;(i<mmdb::IMin(maxClustRefine,nClusters)) &&
-           (Cluster[i]->n>=min_size);i++)
-      refineCluster ( i );
+    for (i=0;(i<mmdb::IMin(maxClustRefine,nClusters)) && (Cluster[i]->n>=min_size);i++) {
+        refineCluster(i);
+        if (stop) {
+            break;
+        }
+    }
 
   }
 

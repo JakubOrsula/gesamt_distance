@@ -36,12 +36,11 @@ int main(int argc, char **argv) {
         std::cout << e.what() << std::endl;
     }
 
-    auto first = data[0];
-
-#pragma omp parallel for default(none) shared(data, std::cout, first)
-    for (int i = 0; i < data.size(); i++) {
-        std::cout << get_distance(first, data[i]) << std::endl;
+#pragma omp parallel for default(none) shared(data, std::cout) collapse(2)
+    for (int i = 0; i < 50; i++) {
+        for (int j = 0; j < data.size(); j++) {
+            std::cout << data[i] << " " << data[j] << ": " << get_distance(data[i], data[j], -1) << std::endl;
+        }
     }
-
     return 0;
 }
