@@ -3,22 +3,24 @@
 //
 
 #include <iostream>
+#include <omp.h>
 #include <string>
 #include <vector>
 #include <fstream>
-
 #include "protein_distance.h"
 
 
 int main(int argc, char **argv) {
 
-    if (argc != 3) {
+    if (argc != 5) {
         std::cerr << "Not enough arguments" << std::endl;
         return 1;
     }
 
     const std::string archive = argv[1];
     const std::string pivots = argv[2];
+    int size = atoi(argv[3]);
+    float timeout = atof(argv[4]);
 
     init_library(archive, pivots, true, 0.6);
 
@@ -36,10 +38,10 @@ int main(int argc, char **argv) {
         std::cout << e.what() << std::endl;
     }
 
-#pragma omp parallel for default(none) shared(data, std::cout) collapse(2)
-    for (int i = 0; i < 50; i++) {
+#pragma omp parallel for default(none) shared(data, timeout, size, std::cout) schedule(dynamic) collapse(2)
+    for (int i = 0; i < size; i++) {
         for (int j = 0; j < data.size(); j++) {
-            std::cout << data[i] << " " << data[j] << ": " << get_distance(data[i], data[j], -1) << std::endl;
+            std::cout << get_distance(data[i], data[j], timeout) << std::endl;
         }
     }
     return 0;
