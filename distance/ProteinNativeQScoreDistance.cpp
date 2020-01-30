@@ -4,27 +4,30 @@
 
 #include <future>
 #include <string>
-#include <utility>
+#include <chrono>
 #include <vector>
 #include <memory>
 #include <fstream>
+#include <functional>
 #include <algorithm>
 #include <iostream>
 #include <sstream>
-#include <unordered_map>
-#include <mutex>
-#include <set>
+
+#define TBB_PREVIEW_CONCURRENT_LRU_CACHE 1
+#include "tbb/concurrent_lru_cache.h"
 
 #include "ProteinNativeQScoreDistance.h"
 #include "gesamtlib/gsmt_aligner.h"
 
-bool binary = false;
-double threshold;
-std::string directory;
-std::string preload_list;
 
-std::set<std::string> pivots;
-std::unordered_map<std::string, std::shared_ptr<gsmt::Structure>> structures;
+#define LRU_CACHE_SIZE_BONUS 1000
+
+static double threshold;
+
+typedef std::function<std::shared_ptr<gsmt::Structure>(const std::string &)> load_ft;
+typedef tbb::concurrent_lru_cache<std::string, std::shared_ptr<gsmt::Structure>, load_ft> cache_t;
+
+static cache_t *cache;
 
 
 std::string to_lower(std::string s) {
@@ -33,7 +36,8 @@ std::string to_lower(std::string s) {
 }
 
 
-std::shared_ptr<gsmt::Structure> load_single_structure(const std::string &id) {
+std::shared_ptr<gsmt::Structure>
+load_single_structure(const std::string &id, const std::string &directory, bool binary) {
 
     mmdb::io::File file;
 
@@ -74,48 +78,43 @@ std::shared_ptr<gsmt::Structure> load_single_structure(const std::string &id) {
 
 void init_library(const std::string &archive_directory, const std::string &pivot_list, bool binary_archive,
                   double approximation_threshold) {
-    directory = archive_directory;
-    preload_list = pivot_list;
-    binary = binary_archive;
     threshold = approximation_threshold;
 
     /* Populate pivots */
+    std::vector<std::string> pivots;
     try {
-        std::fstream file(preload_list);
+        std::fstream file(pivot_list);
 
         std::string line;
         while (std::getline(file, line)) {
-            pivots.insert(line);
+            pivots.push_back(line);
         }
     }
     catch (std::exception &e) {
         std::cout << e.what() << std::endl;
+        throw;
     }
+
+    /* Fix arguments to avoid global variables */
+    auto load = [=](auto && id) { return load_single_structure(id, archive_directory, binary_archive); };
+
+    cache = new cache_t(load, pivots.size() + LRU_CACHE_SIZE_BONUS);
 
     /* Preload structures */
     for (const auto &id: pivots) {
-        auto s = load_single_structure(id);
-        structures.insert({id, std::move(s)});
+        (*cache)[id];
     }
 }
 
 
-float get_distance(const std::string& id1, const std::string &id2, float time_threshold) {
+float get_distance(const std::string &id1, const std::string &id2, float time_threshold) {
 
-    std::shared_ptr<gsmt::Structure> s1;
-    std::shared_ptr<gsmt::Structure> s2;
+    /* Handle keeps structure from removing from LRU cache */
+    auto handle1 = (*cache)[id1];
+    auto handle2 = (*cache)[id2];
 
-    if (structures.find(id1) != structures.end()) {
-        s1 = structures[id1];
-    } else {
-        s1 = load_single_structure(id1);
-    }
-
-    if (structures.find(id2) != structures.end()) {
-        s2 = structures[id2];
-    } else {
-        s2 = load_single_structure(id2);
-    }
+    gsmt::Structure *s1 = handle1.value().get();
+    gsmt::Structure *s2 = handle2.value().get();
 
     auto Aligner = std::make_unique<gsmt::Aligner>();
     Aligner->setPerformanceLevel(gsmt::PERFORMANCE_CODE::PERFORMANCE_Efficient);
@@ -128,7 +127,7 @@ float get_distance(const std::string& id1, const std::string &id2, float time_th
 
     float distance;
     if (time_threshold < 0) {
-        Aligner->Align(s1.get(), s2.get(), false);
+        Aligner->Align(s1, s2, false);
         Aligner->getBestMatch(SD, matchNo);
         if (SD) {
             distance = 1 - static_cast<float>(SD->Q);
@@ -137,7 +136,7 @@ float get_distance(const std::string& id1, const std::string &id2, float time_th
         }
     } else {
         std::future<void> future = std::async(std::launch::async, [&] {
-            Aligner->Align(s1.get(), s2.get(), false);
+            Aligner->Align(s1, s2, false);
         });
 
         auto timeout = static_cast<long>(time_threshold * 1000);
@@ -195,4 +194,3 @@ Java_messif_distance_impl_ProteinNativeQScoreDistance_getNativeDistance(JNIEnv *
 
     return get_distance(id1, id2, timeThresholdInSeconds);
 }
-
