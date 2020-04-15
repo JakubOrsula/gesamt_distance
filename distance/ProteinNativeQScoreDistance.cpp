@@ -171,6 +171,17 @@ JNIEXPORT void JNICALL Java_messif_distance_impl_ProteinNativeQScoreDistance_ini
                                                                                   jstring j_directory, jstring j_list,
                                                                                   jboolean j_binary,
                                                                                   jdouble j_threshold) {
+
+    if (j_directory == nullptr) {
+        jclass Exception = env->FindClass("java/lang/NullPointerException");
+        env->ThrowNew(Exception, "No archive directory specified");
+    }
+
+    if (j_list == nullptr) {
+        jclass Exception = env->FindClass("java/lang/NullPointerException");
+        env->ThrowNew(Exception, "No preload list specified");
+    }
+
     const char *c_directory = env->GetStringUTFChars(j_directory, nullptr);
     const char *c_list = env->GetStringUTFChars(j_list, nullptr);
 
@@ -196,6 +207,16 @@ JNIEXPORT void JNICALL Java_messif_distance_impl_ProteinNativeQScoreDistance_ini
 JNIEXPORT jfloat JNICALL
 Java_messif_distance_impl_ProteinNativeQScoreDistance_getNativeDistance(JNIEnv *env, jobject, jstring o1id,
                                                                         jstring o2id, jfloat timeThresholdInSeconds) {
+
+    if (o1id == nullptr) {
+        jclass Exception = env->FindClass("java/lang/NullPointerException");
+        env->ThrowNew(Exception, "First object not specified");
+    }
+
+    if (o2id == nullptr) {
+        jclass Exception = env->FindClass("java/lang/NullPointerException");
+        env->ThrowNew(Exception, "Second object not specified");
+    }
 
     const char *o1s = env->GetStringUTFChars(o1id, nullptr);
     const char *o2s = env->GetStringUTFChars(o2id, nullptr);
