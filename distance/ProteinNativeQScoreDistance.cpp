@@ -91,8 +91,9 @@ void init_library(const std::string &archive_directory, const std::string &pivot
         }
     }
     catch (std::exception &e) {
-        std::cout << e.what() << std::endl;
-        throw;
+        std::stringstream ss;
+        ss << "INIT: Cannot read preload list from file: " << pivot_list;
+        throw std::runtime_error(ss.str());
     }
 
     /* Fix arguments to avoid global variables */
@@ -100,9 +101,15 @@ void init_library(const std::string &archive_directory, const std::string &pivot
 
     cache = new cache_t(load, pivots.size() + LRU_CACHE_SIZE_BONUS);
 
-    /* Preload structures */
-    for (const auto &id: pivots) {
-        (*cache)[id];
+    try {
+        /* Preload structures */
+        for (const auto &id: pivots) {
+            (*cache)[id];
+        }
+    } catch (std::exception &e) {
+        std::stringstream ss;
+        ss << "INIT:Preload: " << e.what();
+        throw std::runtime_error(ss.str());
     }
 }
 
@@ -167,11 +174,22 @@ JNIEXPORT void JNICALL Java_messif_distance_impl_ProteinNativeQScoreDistance_ini
     const char *c_directory = env->GetStringUTFChars(j_directory, nullptr);
     const char *c_list = env->GetStringUTFChars(j_list, nullptr);
 
-    init_library(std::string(c_directory), std::string(c_list), static_cast<bool>(j_binary), j_threshold);
+#ifndef NDEBUG
+    std::cout << "JNI: Initializing the GESAMT library" << std::endl;
+    std::cout << "JNI: Parameters: archive_dir = " << c_directory << " preload_list = " << c_list << " binary = " <<
+                 static_cast<bool>(j_binary) << " threshold = " << j_threshold << std::endl;
+#endif
+
+    try {
+        init_library(std::string(c_directory), std::string(c_list), static_cast<bool>(j_binary), j_threshold);
+    }
+    catch (std::exception &e) {
+        jclass Exception = env->FindClass("java/lang/Exception");
+        env->ThrowNew(Exception, e.what());
+    }
 
     env->ReleaseStringChars(j_directory, nullptr);
     env->ReleaseStringChars(j_list, nullptr);
-
 }
 
 
@@ -189,8 +207,15 @@ Java_messif_distance_impl_ProteinNativeQScoreDistance_getNativeDistance(JNIEnv *
     env->ReleaseStringChars(o1id, nullptr);
 
 #ifndef NDEBUG
-    std::cout << "Distance between " << id1 << " and " << id2 << std::endl;
+    std::cout << "JNI: Computing distance between " << id1 << " and " << id2 << std::endl;
 #endif
-
-    return get_distance(id1, id2, timeThresholdInSeconds);
+    try {
+        return get_distance(id1, id2, timeThresholdInSeconds);
+    }
+    catch (std::exception &e) {
+        jclass Exception = env->FindClass("java/lang/Exception");
+        env->ThrowNew(Exception, e.what());
+        /* Won't get here, but make compiler happy */
+        return 0;
+    }
 }
