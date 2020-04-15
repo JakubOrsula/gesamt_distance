@@ -175,11 +175,13 @@ JNIEXPORT void JNICALL Java_messif_distance_impl_ProteinNativeQScoreDistance_ini
     if (j_directory == nullptr) {
         jclass Exception = env->FindClass("java/lang/NullPointerException");
         env->ThrowNew(Exception, "No archive directory specified");
+        return;
     }
 
     if (j_list == nullptr) {
         jclass Exception = env->FindClass("java/lang/NullPointerException");
         env->ThrowNew(Exception, "No preload list specified");
+        return;
     }
 
     const char *c_directory = env->GetStringUTFChars(j_directory, nullptr);
@@ -211,11 +213,13 @@ Java_messif_distance_impl_ProteinNativeQScoreDistance_getNativeDistance(JNIEnv *
     if (o1id == nullptr) {
         jclass Exception = env->FindClass("java/lang/NullPointerException");
         env->ThrowNew(Exception, "First object not specified");
+        return -1;
     }
 
     if (o2id == nullptr) {
         jclass Exception = env->FindClass("java/lang/NullPointerException");
         env->ThrowNew(Exception, "Second object not specified");
+        return -1;
     }
 
     const char *o1s = env->GetStringUTFChars(o1id, nullptr);
@@ -236,7 +240,6 @@ Java_messif_distance_impl_ProteinNativeQScoreDistance_getNativeDistance(JNIEnv *
     catch (std::exception &e) {
         jclass Exception = env->FindClass("java/lang/Exception");
         env->ThrowNew(Exception, e.what());
-        /* Won't get here, but make compiler happy */
-        return 0;
+        return -1;
     }
 }
