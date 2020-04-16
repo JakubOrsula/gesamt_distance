@@ -82,18 +82,16 @@ void init_library(const std::string &archive_directory, const std::string &pivot
 
     /* Populate pivots */
     std::vector<std::string> pivots;
-    try {
-        std::fstream file(pivot_list);
-
-        std::string line;
-        while (std::getline(file, line)) {
-            pivots.push_back(line);
-        }
-    }
-    catch (std::exception &e) {
+    std::ifstream file(pivot_list);
+    if (!file.is_open()) {
         std::stringstream ss;
         ss << "INIT: Cannot read preload list from file: " << pivot_list;
         throw std::runtime_error(ss.str());
+    }
+
+    std::string line;
+    while (std::getline(file, line)) {
+        pivots.push_back(line);
     }
 
     /* Fix arguments to avoid global variables */
@@ -190,7 +188,7 @@ JNIEXPORT void JNICALL Java_messif_distance_impl_ProteinNativeQScoreDistance_ini
 #ifndef NDEBUG
     std::cout << "JNI: Initializing the GESAMT library" << std::endl;
     std::cout << "JNI: Parameters: archive_dir = " << c_directory << " preload_list = " << c_list << " binary = " <<
-                 static_cast<bool>(j_binary) << " threshold = " << j_threshold << std::endl;
+              static_cast<bool>(j_binary) << " threshold = " << j_threshold << std::endl;
 #endif
 
     try {
