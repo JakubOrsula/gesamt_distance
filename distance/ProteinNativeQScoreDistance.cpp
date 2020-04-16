@@ -49,10 +49,14 @@ load_single_structure(const std::string &id, const std::string &directory, bool 
         file.assign(ss.str().c_str());
         if (not file.exists()) {
             std::stringstream ss2;
-            ss2 << "Cannot open file " << file.FileName();
+            ss2 << "Cannot open file: " << file.FileName();
             throw std::runtime_error(ss2.str());
         }
-        file.reset();
+        if (not file.reset(true)) {
+            std::stringstream ss2;
+            ss2 << "Cannot read from file: " << file.FileName();
+            throw std::runtime_error(ss2.str());
+        }
         s->read(file);
         file.shut();
     } else {
@@ -83,7 +87,7 @@ void init_library(const std::string &archive_directory, const std::string &pivot
     /* Populate pivots */
     std::vector<std::string> pivots;
     std::ifstream file(pivot_list);
-    if (!file.is_open()) {
+    if (not file.is_open()) {
         std::stringstream ss;
         ss << "INIT: Cannot read preload list from file: " << pivot_list;
         throw std::runtime_error(ss.str());
