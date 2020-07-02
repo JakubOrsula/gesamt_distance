@@ -27,7 +27,7 @@ static double threshold;
 typedef std::function<std::shared_ptr<gsmt::Structure>(const std::string &)> load_ft;
 typedef tbb::concurrent_lru_cache<std::string, std::shared_ptr<gsmt::Structure>, load_ft> cache_t;
 
-static cache_t *cache;
+static cache_t *cache = nullptr;
 
 
 std::string to_lower(std::string s) {
@@ -80,32 +80,42 @@ load_single_structure(const std::string &id, const std::string &directory, bool 
 }
 
 
-void init_library(const std::string &archive_directory, const std::string &pivot_list, bool binary_archive,
+void init_library(const std::string &archive_directory, const std::string &preload_list_filename, bool binary_archive,
                   double approximation_threshold) {
     threshold = approximation_threshold;
 
-    /* Populate pivots */
-    std::vector<std::string> pivots;
-    std::ifstream file(pivot_list);
+    /* Load structures' names */
+    std::vector<std::string> structure_ids;
+    std::ifstream file(preload_list_filename);
     if (not file.is_open()) {
         std::stringstream ss;
-        ss << "INIT: Cannot read preload list from file: " << pivot_list;
+        ss << "INIT: Cannot read preload list from file: " << preload_list_filename;
         throw std::runtime_error(ss.str());
     }
 
     std::string line;
     while (std::getline(file, line)) {
-        pivots.push_back(line);
+        structure_ids.push_back(line);
     }
 
     /* Fix arguments to avoid global variables */
-    auto load = [=](auto && id) { return load_single_structure(id, archive_directory, binary_archive); };
+    auto load = [=](auto &&id) { return load_single_structure(id, archive_directory, binary_archive); };
 
-    cache = new cache_t(load, pivots.size() + LRU_CACHE_SIZE_BONUS);
+    if (cache == nullptr) {
+        size_t size = structure_ids.size() + LRU_CACHE_SIZE_BONUS;
+#ifndef NDEBUG
+        std::cout << "INIT: initializing new LRU cache of size " << size << std::endl;
+#endif
+        cache = new cache_t(load, size);
+    } else {
+#ifndef NDEBUG
+        std::cout << "INIT: already initialized before, reusing old LRU cache" << std::endl;
+#endif
+    }
 
     try {
         /* Preload structures */
-        for (const auto &id: pivots) {
+        for (const auto &id: structure_ids) {
             (*cache)[id];
         }
     } catch (std::exception &e) {
@@ -186,13 +196,23 @@ JNIEXPORT void JNICALL Java_messif_distance_impl_ProteinNativeQScoreDistance_ini
         return;
     }
 
+    if (j_threshold < 0 or j_threshold > 1) {
+        jclass Exception = env->FindClass("java/lang/Exception");
+        std::stringstream ss;
+        ss << "Approximative threshold of " << j_threshold << " has to be between 0 and 1";
+        const std::string message = ss.str();
+        const char *c_message = message.c_str();
+        env->ThrowNew(Exception, c_message);
+        return;
+    }
+
     const char *c_directory = env->GetStringUTFChars(j_directory, nullptr);
     const char *c_list = env->GetStringUTFChars(j_list, nullptr);
 
 #ifndef NDEBUG
     std::cout << "JNI: Initializing the GESAMT library" << std::endl;
-    std::cout << "JNI: Parameters: archive_dir = " << c_directory << " preload_list = " << c_list << " binary = " <<
-              static_cast<bool>(j_binary) << " threshold = " << j_threshold << std::endl;
+    std::cout << "JNI: Parameters: archive_dir = " << c_directory << " preload_list = " << c_list << " binary = "
+              << static_cast<bool>(j_binary) << " threshold = " << j_threshold << std::endl;
 #endif
 
     try {
@@ -224,6 +244,16 @@ Java_messif_distance_impl_ProteinNativeQScoreDistance_getNativeDistance(JNIEnv *
         return -1;
     }
 
+    if (timeThresholdInSeconds > 3600) {
+        jclass Exception = env->FindClass("java/lang/Exception");
+        std::stringstream ss;
+        ss << "Time threshold of " << timeThresholdInSeconds << " is higher than allowed (3600 s)";
+        const std::string message = ss.str();
+        const char *c_message = message.c_str();
+        env->ThrowNew(Exception, c_message);
+        return -1;
+    }
+
     const char *o1s = env->GetStringUTFChars(o1id, nullptr);
     const char *o2s = env->GetStringUTFChars(o2id, nullptr);
 
@@ -234,7 +264,8 @@ Java_messif_distance_impl_ProteinNativeQScoreDistance_getNativeDistance(JNIEnv *
     env->ReleaseStringChars(o1id, nullptr);
 
 #ifndef NDEBUG
-    std::cout << "JNI: Computing distance between " << id1 << " and " << id2 << std::endl;
+    std::cout << "JNI: Computing distance between " << id1 << " and " << id2 << " using time threshold of "
+              << timeThresholdInSeconds << std::endl;
 #endif
     try {
         return get_distance(id1, id2, timeThresholdInSeconds);

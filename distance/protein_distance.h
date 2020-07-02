@@ -7,7 +7,7 @@
 #include <string>
 
 
-void init_library(const std::string &archive_directory, const std::string &pivot_list, bool binary_archive,
+void init_library(const std::string &archive_directory, const std::string &preload_list_filename, bool binary_archive,
                   double approximation_threshold);
 
 
