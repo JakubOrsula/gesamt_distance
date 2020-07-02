@@ -11,6 +11,7 @@ add_library(ProteinDistance SHARED ProteinNativeQScoreDistance.h ProteinNativeQS
 target_include_directories(ProteinDistance PUBLIC ${PROJECT_BINARY_DIR}/distance)
 target_include_directories(ProteinDistance PUBLIC ${JNI_INCLUDE_DIRS})
 target_link_libraries(ProteinDistance gesamtlib stdc++fs)
+install(TARGETS ProteinDistance DESTINATION lib)
 
 add_executable(calculate_matrix calculate_matrix.cpp)
 target_include_directories(calculate_matrix PUBLIC ../gesamt_src)
@@ -25,3 +26,6 @@ target_link_libraries(chain2bin gesamtlib stdc++)
 
 add_executable(test_parallel test_parallel.cpp protein_distance.h)
 target_link_libraries(test_parallel ProteinDistance)
+
+add_jar(java_distance TestJava.java INCLUDE_JARS proteins-1.0.jar ENTRY_POINT TestJava)
+add_dependencies(java_distance ProteinDistance)
