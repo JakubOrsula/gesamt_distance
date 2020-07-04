@@ -7,7 +7,7 @@ target_link_libraries(sample gesamtlib stdc++fs)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
 
-add_library(ProteinDistance SHARED ProteinNativeQScoreDistance.h ProteinNativeQScoreDistance.cpp)
+add_library(ProteinDistance SHARED ProteinNativeQScoreDistance.h ProteinNativeQScoreDistance.cpp config.h protein_distance.cpp protein_distance.h)
 target_include_directories(ProteinDistance PUBLIC ${PROJECT_BINARY_DIR}/distance)
 target_include_directories(ProteinDistance PUBLIC ${JNI_INCLUDE_DIRS})
 target_link_libraries(ProteinDistance gesamtlib stdc++fs)
@@ -29,3 +29,5 @@ target_link_libraries(test_parallel ProteinDistance)
 
 add_jar(java_distance TestJava.java INCLUDE_JARS proteins-1.0.jar ENTRY_POINT TestJava)
 add_dependencies(java_distance ProteinDistance)
+install_jar(java_distance DESTINATION lib)
+install(FILES proteins-1.0.jar DESTINATION lib)

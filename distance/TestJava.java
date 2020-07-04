@@ -14,11 +14,12 @@ public class TestJava {
         String archive_dir = args[0];
         String preload_list = args[1];
 
-        String id1 = args[2];
-        String id2 = args[3];
+        String query = args[2];
 
         distance.initDistance(archive_dir, preload_list);
-        float d = distance.getDistance(id1, id2, 1.0f);
-        System.out.println(d);
+
+        for (int i = 3; i < args.length; i++) {
+            System.out.println(distance.getDistance(query, args[i], 0.3f));
+        }
     }
 }
