@@ -45,21 +45,27 @@ load_single_structure(const std::string &id, const std::string &directory, bool 
 
 /* Handle query objects */
     if (id[0] == '_') {
-        std::string suffix = id[1] == 'p' ? ".pdb" : ".cif";
 
         auto new_id = id.substr(1);
         auto pos = new_id.find(':');
         auto pdbid = new_id.substr(0, pos);
         auto chain = new_id.substr(pos + 1);
 
-        ss << QUERY_DIRECTORY << "/" << pdbid << suffix;
+        ss << QUERY_CHAINS_DIRECTORY << "/" << new_id << ".bin";
 
-        auto rc = s->getStructure(ss.str().c_str(), chain.c_str(), -1, false);
-        if (rc) {
+        file.assign(ss.str().c_str());
+        if (not file.exists()) {
             std::stringstream ss2;
-            ss2 << "Cannot open file " << ss.str();
+            ss2 << "Cannot open file: " << file.FileName();
             throw std::runtime_error(ss2.str());
         }
+        if (not file.reset(true)) {
+            std::stringstream ss2;
+            ss2 << "Cannot read from file: " << file.FileName();
+            throw std::runtime_error(ss2.str());
+        }
+        s->read(file);
+        file.shut();
 
         s->prepareStructure(7.0);
 
