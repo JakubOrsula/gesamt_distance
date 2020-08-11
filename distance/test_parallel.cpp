@@ -22,7 +22,7 @@ int main(int argc, char **argv) {
     int size = atoi(argv[3]);
     float timeout = atof(argv[4]);
 
-    init_library(archive, pivots, true, 0.6);
+    init_library(archive, pivots, true, 0.6, 600);
 
     std::vector<std::string> data;
 

@@ -12,6 +12,7 @@
 #include <algorithm>
 #include <iostream>
 #include <sstream>
+#include <cassert>
 
 #define TBB_PREVIEW_CONCURRENT_LRU_CACHE 1
 #include "tbb/concurrent_lru_cache.h"
@@ -19,6 +20,7 @@
 
 #include "config.h"
 #include "gesamtlib/gsmt_aligner.h"
+#include "protein_distance.h"
 
 static double threshold;
 
@@ -31,6 +33,14 @@ static cache_t *cache = nullptr;
 std::string to_lower(std::string s) {
     std::transform(s.begin(), s.end(), s.begin(), ::tolower);
     return s;
+}
+
+std::shared_ptr<gsmt::Structure> get_structure(const std::string &id) {
+    if (not cache) {
+        throw std::runtime_error("LRU cache not initialized. You must run init_library first!");
+    }
+
+    return (*cache)[id].value();
 }
 
 
@@ -48,10 +58,10 @@ load_single_structure(const std::string &id, const std::string &directory, bool 
 
         auto new_id = id.substr(1);
         auto pos = new_id.find(':');
-        auto pdbid = new_id.substr(0, pos);
+        auto dir = new_id.substr(0, pos);
         auto chain = new_id.substr(pos + 1);
 
-        ss << QUERY_CHAINS_DIRECTORY << "/" << new_id << ".bin";
+        ss << QUERIES_DIRECTORY << "/" << dir << "/" << "query:" << chain << ".bin";
 
         file.assign(ss.str().c_str());
         if (not file.exists()) {
@@ -112,7 +122,7 @@ load_single_structure(const std::string &id, const std::string &directory, bool 
 
 
 void init_library(const std::string &archive_directory, const std::string &preload_list_filename, bool binary_archive,
-                  double approximation_threshold) {
+                  double approximation_threshold, int cache_size) {
     threshold = approximation_threshold;
 
     /* Load structures' names */
@@ -134,9 +144,9 @@ void init_library(const std::string &archive_directory, const std::string &prelo
 
     if (cache == nullptr) {
 #ifndef NDEBUG
-        std::cerr << "INIT: initializing new LRU cache of size " << LRU_CACHE_SIZE << std::endl;
+        std::cerr << "INIT: initializing new LRU cache of size " << cache_size << std::endl;
 #endif
-        cache = new cache_t(load, LRU_CACHE_SIZE);
+        cache = new cache_t(load, cache_size);
     } else {
 #ifndef NDEBUG
         std::cerr << "INIT: already initialized before, reusing old LRU cache" << std::endl;
@@ -157,6 +167,26 @@ void init_library(const std::string &archive_directory, const std::string &prelo
 
 
 float get_distance(const std::string &id1, const std::string &id2, float time_threshold) {
+    auto SD = std::make_unique<gsmt::Superposition>();
+    auto status = run_computation(id1, id2, time_threshold, SD);
+    switch (status) {
+        case RESULT_OK:
+            return 1 - static_cast<float>(SD->Q);
+        case RESULT_DISSIMILAR:
+            return 2;
+        case RESULT_TIMEOUT:
+            return 3;
+        default:
+            assert(false);
+    }
+}
+
+
+enum status run_computation(const std::string &id1, const std::string &id2, float time_threshold, std::unique_ptr<gsmt::Superposition> &SD) {
+
+    if (not cache) {
+        throw std::runtime_error("LRU cache not initialized. You must run init_library first!");
+    }
 
     /* Handle keeps structure from removing from LRU cache */
     auto handle1 = (*cache)[id1];
@@ -171,18 +201,14 @@ float get_distance(const std::string &id1, const std::string &id2, float time_th
     Aligner->setQR0(QR0_default);
     Aligner->setSigma(sigma_default);
 
-    gsmt::PSuperposition SD;
     int matchNo;
 
-    float distance;
+    gsmt::PSuperposition SD_raw;
+    enum status ret;
     if (time_threshold < 0) {
         Aligner->Align(s1, s2, false);
-        Aligner->getBestMatch(SD, matchNo);
-        if (SD) {
-            distance = 1 - static_cast<float>(SD->Q);
-        } else {
-            distance = 2;
-        }
+        Aligner->getBestMatch(SD_raw, matchNo);
+        ret = SD_raw ? RESULT_OK : RESULT_DISSIMILAR;
     } else {
         std::future<void> future = std::async(std::launch::async, [&] {
             Aligner->Align(s1, s2, false);
@@ -192,18 +218,16 @@ float get_distance(const std::string &id1, const std::string &id2, float time_th
         std::future_status status = future.wait_for(std::chrono::milliseconds(timeout));
 
         if (status == std::future_status::ready) {
-            Aligner->getBestMatch(SD, matchNo);
-            if (SD) {
-                distance = 1 - static_cast<float>(SD->Q);
-            } else {
-                distance = 2;
-            }
+            Aligner->getBestMatch(SD_raw, matchNo);
+            ret = SD_raw ? RESULT_OK : RESULT_DISSIMILAR;
         } else {
             Aligner->stop = true;
-            distance = 3;
+            ret = RESULT_TIMEOUT;
         }
         future.wait();
     }
-
-    return distance;
+    if (ret == RESULT_OK) {
+        SD->CopyFrom(SD_raw);
+    }
+    return ret;
 }

@@ -7,8 +7,11 @@
 #include <sstream>
 
 #include "protein_distance.h"
+
 #include "ProteinNativeQScoreDistance.h"
 
+
+static const int LRU_CACHE_SIZE = 600;
 
 JNIEXPORT void JNICALL Java_messif_distance_impl_ProteinNativeQScoreDistance_init(JNIEnv *env, jclass,
                                                                                   jstring j_directory, jstring j_list,
@@ -47,7 +50,7 @@ JNIEXPORT void JNICALL Java_messif_distance_impl_ProteinNativeQScoreDistance_ini
 #endif
 
     try {
-        init_library(std::string(c_directory), std::string(c_list), static_cast<bool>(j_binary), j_threshold);
+        init_library(std::string(c_directory), std::string(c_list), static_cast<bool>(j_binary), j_threshold, LRU_CACHE_SIZE);
     }
     catch (std::exception &e) {
         jclass Exception = env->FindClass("java/lang/Exception");
