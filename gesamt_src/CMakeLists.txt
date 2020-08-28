@@ -21,3 +21,5 @@ add_executable(gesamt
 )
 
 target_link_libraries(gesamt gesamtlib pthread z)
+install(TARGETS gesamt DESTINATION bin)
+
