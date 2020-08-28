@@ -177,7 +177,7 @@ float get_distance(const std::string &id1, const std::string &id2, float time_th
         case RESULT_TIMEOUT:
             return 3;
         default:
-            assert(false);
+            throw std::runtime_error("Internal error.");
     }
 }
 

@@ -16,6 +16,8 @@ enum status {
     RESULT_TIMEOUT
 };
 
+std::shared_ptr<gsmt::Structure> load_single_structure(const std::string &id, const std::string &directory, bool binary);
+
 
 void init_library(const std::string &archive_directory, const std::string &preload_list_filename, bool binary_archive,
                   double approximation_threshold, int cache_size);

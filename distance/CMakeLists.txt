@@ -23,7 +23,7 @@ target_link_libraries(calculate_matrix gesamtlib stdc++fs)
 
 add_executable(get_sizes get_sizes.cpp)
 target_include_directories(get_sizes PUBLIC ../gesamt_src)
-target_link_libraries(get_sizes gesamtlib stdc++fs)
+target_link_libraries(get_sizes protein_distance gesamtlib stdc++fs)
 
 add_executable(chain2bin chain2bin.cpp)
 target_link_libraries(chain2bin gesamtlib stdc++)
