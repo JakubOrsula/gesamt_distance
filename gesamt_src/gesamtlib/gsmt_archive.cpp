@@ -101,7 +101,7 @@ int             n,fsize,new_len,i;
     return 0;
 
   f.assign ( filePath,true,false );
-  if (!f.reset())  {
+  if (!f.reset(true))  {
     if (list)
       list[0][0] = char(0);
     return -1;
