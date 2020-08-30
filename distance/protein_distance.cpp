@@ -15,6 +15,7 @@
 #include <cassert>
 
 #define TBB_PREVIEW_CONCURRENT_LRU_CACHE 1
+
 #include "tbb/concurrent_lru_cache.h"
 
 
@@ -55,28 +56,36 @@ load_single_structure(const std::string &id, const std::string &directory, bool 
 
 /* Handle query objects */
     if (id[0] == '_') {
-
         auto new_id = id.substr(1);
         auto pos = new_id.find(':');
         auto dir = new_id.substr(0, pos);
         auto chain = new_id.substr(pos + 1);
 
-        ss << QUERIES_DIRECTORY << "/" << dir << "/" << "query:" << chain << ".bin";
+        if (binary) {
+            ss << QUERIES_DIRECTORY << "/" << dir << "/" << "query:" << chain << ".bin";
 
-        file.assign(ss.str().c_str());
-        if (not file.exists()) {
-            std::stringstream ss2;
-            ss2 << "Cannot open file: " << file.FileName();
-            throw std::runtime_error(ss2.str());
+            file.assign(ss.str().c_str());
+            if (not file.exists()) {
+                std::stringstream ss2;
+                ss2 << "Cannot open file: " << file.FileName();
+                throw std::runtime_error(ss2.str());
+            }
+            if (not file.reset(true)) {
+                std::stringstream ss2;
+                ss2 << "Cannot read from file: " << file.FileName();
+                throw std::runtime_error(ss2.str());
+            }
+            s->read(file);
+            file.shut();
+        } else {
+            ss << QUERIES_DIRECTORY << "/" << dir << "/" << "query";
+            auto rc = s->getStructure(ss.str().c_str(), chain.c_str(), -1, false);
+            if (rc) {
+                std::stringstream ss2;
+                ss2 << "Cannot open file " << ss.str();
+                throw std::runtime_error(ss2.str());
+            }
         }
-        if (not file.reset(true)) {
-            std::stringstream ss2;
-            ss2 << "Cannot read from file: " << file.FileName();
-            throw std::runtime_error(ss2.str());
-        }
-        s->read(file);
-        file.shut();
-
         s->prepareStructure(7.0);
 
 #ifndef NDEBUG
@@ -182,7 +191,8 @@ float get_distance(const std::string &id1, const std::string &id2, float time_th
 }
 
 
-enum status run_computation(const std::string &id1, const std::string &id2, float time_threshold, std::unique_ptr<gsmt::Superposition> &SD) {
+enum status run_computation(const std::string &id1, const std::string &id2, float time_threshold,
+                            std::unique_ptr<gsmt::Superposition> &SD) {
 
     if (not cache) {
         throw std::runtime_error("LRU cache not initialized. You must run init_library first!");
