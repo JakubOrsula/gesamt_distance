@@ -31,7 +31,7 @@ JNIEXPORT void JNICALL Java_messif_distance_impl_ProteinNativeQScoreDistance_ini
     }
 
     if (j_threshold < 0 or j_threshold > 1) {
-        jclass Exception = env->FindClass("java/lang/Exception");
+        jclass Exception = env->FindClass("java/lang/IllegalArgumentException");
         std::stringstream ss;
         ss << "Approximative threshold of " << j_threshold << " has to be between 0 and 1";
         const std::string message = ss.str();
@@ -53,7 +53,7 @@ JNIEXPORT void JNICALL Java_messif_distance_impl_ProteinNativeQScoreDistance_ini
         init_library(std::string(c_directory), std::string(c_list), static_cast<bool>(j_binary), j_threshold, LRU_CACHE_SIZE);
     }
     catch (std::exception &e) {
-        jclass Exception = env->FindClass("java/lang/Exception");
+        jclass Exception = env->FindClass("java/lang/RuntimeException");
         env->ThrowNew(Exception, e.what());
     }
 
@@ -79,7 +79,7 @@ Java_messif_distance_impl_ProteinNativeQScoreDistance_getNativeDistance(JNIEnv *
     }
 
     if (timeThresholdInSeconds > 3600) {
-        jclass Exception = env->FindClass("java/lang/Exception");
+        jclass Exception = env->FindClass("java/lang/IllegalArgumentException");
         std::stringstream ss;
         ss << "Time threshold of " << timeThresholdInSeconds << " is higher than allowed (3600 s)";
         const std::string message = ss.str();
@@ -105,7 +105,7 @@ Java_messif_distance_impl_ProteinNativeQScoreDistance_getNativeDistance(JNIEnv *
         return get_distance(id1, id2, timeThresholdInSeconds);
     }
     catch (std::exception &e) {
-        jclass Exception = env->FindClass("java/lang/Exception");
+        jclass Exception = env->FindClass("java/lang/RuntimeException");
         env->ThrowNew(Exception, e.what());
         return -1;
     }
