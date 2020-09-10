@@ -1,6 +1,8 @@
 #include <iostream>
 #include <filesystem>
 #include <algorithm>
+#include <set>
+#include <omp.h>
 
 #include "gesamtlib/gsmt_structure.h"
 #include "gesamtlib/gsmt_defs.h"
@@ -24,29 +26,40 @@ int main(int argc, char **argv) {
     const fs::path raw_pdb_dir = argv[1];
     const fs::path output_binary_dir = argv[2];
 
+    std::vector<fs::directory_entry> files;
+    std::set<std::string> subdirs;
     for (const auto &file_entry: fs::directory_iterator(raw_pdb_dir)) {
         if (not file_entry.is_regular_file()) {
             continue;
         }
 
-        const std::string subdir = std::string(file_entry.path().filename()).substr(0, 2);
+        files.emplace_back(file_entry);
+        subdirs.insert(std::string(file_entry.path().filename()).substr(0, 2));
+    }
+
+    for (const auto &subdir: subdirs) {
         fs::create_directory(output_binary_dir / subdir);
+    }
+
+#pragma omp parallel for default(none) shared(files, output_binary_dir, std::cerr, std::cout)
+    for (size_t i = 0; i < files.size(); i++) {
+        const auto &file_entry = files[i];
 
         std::string pdb_id = to_upper(std::string(file_entry.path().filename()).substr(0, 4));
+        const std::string subdir = std::string(file_entry.path().filename()).substr(0, 2);
 
-        std::cerr << "Started processing: " << pdb_id << std::endl;
         int chain_no = 0;
         int rc;
         while (true) {
             gsmt::Structure structure;
             rc = structure.getStructure(file_entry.path().c_str(), nullptr, chain_no, true);
             if (rc && chain_no) {
-                std::cerr << "No other chain is present" << std::endl;
-                /* No other chain is present */
                 break;
             }
             if (rc) {
-                std::cerr << "Cannot read from file: " << file_entry.path() << std::endl;
+                std::stringstream ss;
+                ss << "Cannot read from file: " << std::string(file_entry.path()) << std::endl;
+                std::cerr << ss.str();
                 break;
             }
 
@@ -54,23 +67,18 @@ int main(int argc, char **argv) {
             int n_atoms;
             structure.getCalphas(atom, n_atoms);
 
-            std::cerr << "Chain_no: " << chain_no << " # atoms: " << n_atoms << std::endl;
-
             if (n_atoms >= seg_length_default) {
                 std::string chain_id = atom[0]->GetChainID();
                 mmdb::io::File file;
-                std::stringstream ss;
-                std::cout << pdb_id << ":" << chain_id << std::endl;
-                ss << std::string(output_binary_dir) << "/" << subdir << "/" << pdb_id << ":" << chain_id << ".bin";
-                file.assign(ss.str().c_str());
+                std::stringstream ss1, ss2;
+
+                ss1 << "Converted: " << pdb_id << ":" << chain_id << std::endl;
+                std::cout << ss1.str();
+                ss2 << std::string(output_binary_dir) << "/" << subdir << "/" << pdb_id << ":" << chain_id << ".bin";
+                file.assign(ss2.str().c_str());
                 file.rewrite();
                 structure.write(file);
                 file.shut();
-            } else {
-                if (n_atoms > 0) {
-                    std::cout << "Skipping: " << pdb_id << ":" << atom[0]->GetChainID() << " # atoms: " << n_atoms
-                              << std::endl;
-                }
             }
             chain_no++;
         }
