@@ -31,6 +31,9 @@ target_link_libraries(chain2bin gesamtlib stdc++)
 add_executable(test_parallel test_parallel.cpp protein_distance.h)
 target_link_libraries(test_parallel ProteinDistance)
 
+add_executable(create_binary_archive create_binary_archive.cpp)
+target_link_libraries(create_binary_archive gesamtlib)
+
 add_jar(java_distance TestJava.java INCLUDE_JARS proteins-1.0.jar ENTRY_POINT TestJava)
 add_dependencies(java_distance ProteinDistance)
 install_jar(java_distance DESTINATION lib)
