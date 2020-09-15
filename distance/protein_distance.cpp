@@ -40,7 +40,6 @@ std::shared_ptr<gsmt::Structure> get_structure(const std::string &id) {
     if (not cache) {
         throw std::runtime_error("LRU cache not initialized. You must run init_library first!");
     }
-
     return (*cache)[id].value();
 }
 
@@ -240,4 +239,9 @@ enum status run_computation(const std::string &id1, const std::string &id2, floa
         SD->CopyFrom(SD_raw);
     }
     return ret;
+}
+
+
+void close_library() {
+    delete cache;
 }

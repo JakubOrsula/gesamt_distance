@@ -22,6 +22,8 @@ std::shared_ptr<gsmt::Structure> load_single_structure(const std::string &id, co
 void init_library(const std::string &archive_directory, const std::string &preload_list_filename, bool binary_archive,
                   double approximation_threshold, int cache_size);
 
+void close_library();
+
 enum status run_computation(const std::string &id1, const std::string &id2, float time_threshold, std::unique_ptr<gsmt::Superposition> &SD);
 
 float get_distance(const std::string& id1, const std::string &id2, float time_threshold);
