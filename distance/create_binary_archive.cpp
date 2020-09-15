@@ -78,8 +78,8 @@ int main(int argc, char **argv) {
 
         int chain_no = 0;
         int rc;
+        gsmt::Structure structure;
         while (true) {
-            gsmt::Structure structure;
             rc = structure.getStructure(file_entry.path().c_str(), nullptr, chain_no, true);
             if (rc && chain_no) {
                 std::stringstream ss1;
