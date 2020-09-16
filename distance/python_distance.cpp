@@ -51,14 +51,12 @@ std::vector<std::string> save_chains(const std::string &input_file, const std::s
 }
 
 
-std::tuple<enum status, float, float, float, int>
-computation_details(const std::string &id1, const std::string &id2, const std::string &archive_dir,
-                    const std::string &output_dir) {
-
+int prepare_aligned_PDBs(const std::string &id1, const std::string &id2, const std::string &archive_dir,
+                         const std::string &output_dir) {
     auto s1 = load_single_structure(id1, archive_dir, false);
     auto s2 = load_single_structure(id2, archive_dir, false);
 
-    const double threshold = 0.6;
+    const double threshold = 0.0;
 
     auto Aligner = std::make_unique<gsmt::Aligner>();
     Aligner->setPerformanceLevel(gsmt::PERFORMANCE_CODE::PERFORMANCE_Efficient);
@@ -72,7 +70,7 @@ computation_details(const std::string &id1, const std::string &id2, const std::s
     Aligner->getBestMatch(SD, matchNo);
 
     if (not SD) {
-        return std::make_tuple(RESULT_DISSIMILAR, 0, 0, 0, 0);
+        return 1;
     }
 
     auto M1 = s1->getSelectedStructure(mmdb::STYPE_CHAIN);
@@ -93,6 +91,33 @@ computation_details(const std::string &id1, const std::string &id2, const std::s
     delete M1;
     delete M2;
 
+    return 0;
+}
+
+
+std::tuple<enum status, float, float, float, int>
+get_results(const std::string &id1, const std::string &id2, const std::string &archive_dir) {
+
+    auto s1 = load_single_structure(id1, archive_dir, true);
+    auto s2 = load_single_structure(id2, archive_dir, true);
+
+    const double threshold = 0.0;
+
+    auto Aligner = std::make_unique<gsmt::Aligner>();
+    Aligner->setPerformanceLevel(gsmt::PERFORMANCE_CODE::PERFORMANCE_Efficient);
+    Aligner->setSimilarityThresholds(threshold, threshold);
+    Aligner->setQR0(QR0_default);
+    Aligner->setSigma(sigma_default);
+
+    int matchNo;
+    gsmt::PSuperposition SD;
+    Aligner->Align(s1.get(), s2.get(), false);
+    Aligner->getBestMatch(SD, matchNo);
+
+    if (not SD) {
+        return std::make_tuple(RESULT_DISSIMILAR, 0, 0, 0, 0);
+    }
+
     return std::make_tuple(RESULT_OK, SD->Q, SD->rmsd, SD->seqId, SD->Nalgn);
 }
 
@@ -109,7 +134,6 @@ PYBIND11_MODULE(python_distance, m) {
     m.def("init_library", &init_library, "archive_directory"_a, "preload_list"_a, "binary_archive"_a,
           "approximation_threshold"_a, "cache_size"_a, "Initialize the library");
     m.def("get_distance", &get_distance, "id1"_a, "id2"_a, "time_threshold"_a, "Compute distance between two objects");
-    m.def("computation_details", &computation_details, "id1"_a, "id2"_a, "archive_dir"_a, "output_dir"_a,
-          "Get details about distance computation");
-
+    m.def("get_results", &get_results, "id1"_a, "id2"_a, "archive_dir"_a, "Get the Qscore and other metrics between two objects");
+    m.def("prepare_aligned_PDBs", &prepare_aligned_PDBs, "id1"_a, "id2"_a, "archive_dir"_a, "output_dir"_a, "Prepare aligned PDBs to display");
 }
