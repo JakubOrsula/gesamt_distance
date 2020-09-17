@@ -5,16 +5,12 @@
 #include <fstream>
 #include <omp.h>
 
+#include "common.h"
 #include "gesamtlib/gsmt_structure.h"
 #include "gesamtlib/gsmt_defs.h"
 
 
 namespace fs = std::filesystem;
-
-std::string to_upper(std::string s) {
-    std::transform(s.begin(), s.end(), s.begin(), ::toupper);
-    return s;
-}
 
 
 int main(int argc, char **argv) {

@@ -31,7 +31,7 @@ target_link_libraries(chain2bin gesamtlib stdc++)
 add_executable(test_parallel test_parallel.cpp protein_distance.h)
 target_link_libraries(test_parallel ProteinDistance)
 
-add_executable(create_binary_archive create_binary_archive.cpp)
+add_executable(create_binary_archive create_binary_archive.cpp common.h)
 target_link_libraries(create_binary_archive gesamtlib)
 
 add_jar(java_distance TestJava.java INCLUDE_JARS proteins-1.0.jar ENTRY_POINT TestJava)
@@ -42,6 +42,6 @@ install(FILES proteins-1.0.jar DESTINATION lib)
 add_jar(get_candidates GetCandidates.java ENTRY_POINT GetCandidates)
 install_jar(get_candidates DESTINATION lib)
 
-pybind11_add_module(python_distance python_distance.cpp)
+pybind11_add_module(python_distance python_distance.cpp common.h)
 target_link_libraries(python_distance PRIVATE protein_distance)
 install(TARGETS python_distance DESTINATION lib)
