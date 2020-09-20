@@ -112,7 +112,7 @@ load_single_structure(const std::string &id, const std::string &directory, bool 
         auto pos = id.find(':');
         auto pdbid = id.substr(0, pos);
         auto chain = id.substr(pos + 1);
-        ss << directory << "/" << to_lower(id.substr(0, 2)) << "/" << to_lower(pdbid) << "_updated.cif";
+        ss << directory << "/" << to_lower(id.substr(0, 2)) << "/" << to_lower(pdbid) << CIF_SUFFIX;
         auto rc = s->getStructure(ss.str().c_str(), chain.c_str(), -1, false);
         if (rc) {
             std::stringstream ss2;

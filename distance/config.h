@@ -4,4 +4,6 @@
 
 #pragma once
 
+#define CIF_SUFFIX ".cif"
+
 #define QUERIES_DIRECTORY "/var/local/ProteinSearch/computations"
