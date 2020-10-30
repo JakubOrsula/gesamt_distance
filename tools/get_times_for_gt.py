@@ -28,10 +28,8 @@ if __name__ == '__main__':
 
     python_distance.init_library(archive_dir, '/dev/null', True, 0, 100)
     for query, nearest in to_compute.items():
-        if not query.startswith('1'):
-            continue
         start = time.time()
         for obj in nearest:
             python_distance.get_distance(query, obj, -1)
         end = time.time()
-        print(f'{query} {end - start}')
+        print(f'{query} {end - start:.3f}')
