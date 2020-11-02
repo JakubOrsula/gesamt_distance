@@ -3,11 +3,17 @@ import csv
 import sys
 import python_distance
 import time
+import multiprocessing
+import functools
 
 N = 30
 
-if __name__ == '__main__':
 
+def worker(obj, query):
+    return python_distance.get_distance(query, obj, -1)
+
+
+def main():
     archive_dir = sys.argv[1]
     mapping_file = sys.argv[2]
     gt_file = sys.argv[3]
@@ -27,9 +33,13 @@ if __name__ == '__main__':
             to_compute[mapping[query_number]] = similar_objects
 
     python_distance.init_library(archive_dir, '/dev/null', True, 0, 100)
-    for query, nearest in to_compute.items():
-        start = time.time()
-        for obj in nearest:
-            python_distance.get_distance(query, obj, -1)
-        end = time.time()
-        print(f'{query} {end - start:.3f}')
+    with multiprocessing.Pool() as pool:
+        for query, nearest in to_compute.items():
+            start = time.time()
+            list(pool.map(functools.partial(worker, query=query), nearest))
+            end = time.time()
+            print(f'{query} {end - start:.3f}')
+
+
+if __name__ == '__main__':
+    main()
