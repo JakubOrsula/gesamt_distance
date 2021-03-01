@@ -60,7 +60,7 @@ load_single_structure(const std::string &id, const std::string &directory, bool 
         auto chain = new_id.substr(pos + 1);
 
         if (binary) {
-            path = std::string(QUERIES_DIRECTORY) + "/query" + dir + "/query" + chain + ".bin";
+            path = std::string(QUERIES_DIRECTORY) + "/query" + dir + "/query:" + chain + ".bin";
             file.assign(path.c_str());
             if (not file.exists()) {
                 throw std::runtime_error("Cannot open binary query file: " + std::string(file.FileName()));
