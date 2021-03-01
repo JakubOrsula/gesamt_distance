@@ -61,17 +61,17 @@ load_single_structure(const std::string &id, const std::string &directory, bool 
         auto chain = new_id.substr(pos + 1);
 
         if (binary) {
-            ss << QUERIES_DIRECTORY << "/" << dir << "/" << "query:" << chain << ".bin";
+            ss << QUERIES_DIRECTORY << "/" << "query" << dir << "/" << "query:" << chain << ".bin";
 
             file.assign(ss.str().c_str());
             if (not file.exists()) {
                 std::stringstream ss2;
-                ss2 << "Cannot open file: " << file.FileName();
+                ss2 << "Cannot open binary query file: " << file.FileName();
                 throw std::runtime_error(ss2.str());
             }
             if (not file.reset(true)) {
                 std::stringstream ss2;
-                ss2 << "Cannot read from file: " << file.FileName();
+                ss2 << "Cannot read from binary query file: " << file.FileName();
                 throw std::runtime_error(ss2.str());
             }
             s->read(file);
@@ -81,7 +81,7 @@ load_single_structure(const std::string &id, const std::string &directory, bool 
             auto rc = s->getStructure(ss.str().c_str(), chain.c_str(), -1, false);
             if (rc) {
                 std::stringstream ss2;
-                ss2 << "Cannot open file " << ss.str();
+                ss2 << "Cannot open raw query file " << ss.str();
                 throw std::runtime_error(ss2.str());
             }
         }
@@ -98,12 +98,12 @@ load_single_structure(const std::string &id, const std::string &directory, bool 
         file.assign(ss.str().c_str());
         if (not file.exists()) {
             std::stringstream ss2;
-            ss2 << "Cannot open file: " << file.FileName();
+            ss2 << "Cannot open binary file: " << file.FileName();
             throw std::runtime_error(ss2.str());
         }
         if (not file.reset(true)) {
             std::stringstream ss2;
-            ss2 << "Cannot read from file: " << file.FileName();
+            ss2 << "Cannot read from binary file: " << file.FileName();
             throw std::runtime_error(ss2.str());
         }
         s->read(file);
@@ -112,11 +112,11 @@ load_single_structure(const std::string &id, const std::string &directory, bool 
         auto pos = id.find(':');
         auto pdbid = id.substr(0, pos);
         auto chain = id.substr(pos + 1);
-        ss << directory << "/" << to_lower(pdbid) << CIF_SUFFIX;
+        ss << directory << "/" << to_lower(id.substr(0, 2)) << "/" << to_lower(pdbid) << CIF_SUFFIX;
         auto rc = s->getStructure(ss.str().c_str(), chain.c_str(), -1, false);
         if (rc) {
             std::stringstream ss2;
-            ss2 << "Cannot open file " << ss.str();
+            ss2 << "Cannot open raw file " << ss.str();
             throw std::runtime_error(ss2.str());
         }
     }
