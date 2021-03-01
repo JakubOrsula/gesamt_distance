@@ -51,6 +51,7 @@ load_single_structure(const std::string &id, const std::string &directory, bool 
 
     auto s = std::make_shared<gsmt::Structure>();
 
+    std::string path;
 /* Handle query objects */
     if (id[0] == '_') {
         auto new_id = id.substr(1);
@@ -59,7 +60,7 @@ load_single_structure(const std::string &id, const std::string &directory, bool 
         auto chain = new_id.substr(pos + 1);
 
         if (binary) {
-            std::string path = std::string(QUERIES_DIRECTORY) + "/query" + dir + "/query" + chain + ".bin";
+            path = std::string(QUERIES_DIRECTORY) + "/query" + dir + "/query" + chain + ".bin";
             file.assign(path.c_str());
             if (not file.exists()) {
                 throw std::runtime_error("Cannot open binary query file: " + std::string(file.FileName()));
@@ -70,7 +71,7 @@ load_single_structure(const std::string &id, const std::string &directory, bool 
             s->read(file);
             file.shut();
         } else {
-            std::string path = std::string(QUERIES_DIRECTORY) + "/query" + dir + "/query";
+            path = std::string(QUERIES_DIRECTORY) + "/query" + dir + "/query";
             std::string chain_id = "/0/" + chain;
             auto rc = s->getStructure(path.c_str(), chain_id.c_str(), -1, false);
             if (rc) {
@@ -80,13 +81,13 @@ load_single_structure(const std::string &id, const std::string &directory, bool 
         s->prepareStructure(7.0);
 
 #ifndef NDEBUG
-        std::cerr << "Loaded query structure: " << id << " from: " << ss.str() << std::endl;
+        std::cerr << "Loaded query structure: " << id << " from: " << path << std::endl;
 #endif
         return s;
     }
 
     if (binary) {
-        std::string path = directory + "/" + to_lower(id.substr(0, 2)) + "/" + id + ".bin";
+        path = directory + "/" + to_lower(id.substr(0, 2)) + "/" + id + ".bin";
         file.assign(path.c_str());
         if (not file.exists()) {
             throw std::runtime_error("Cannot open binary file: " + std::string(file.FileName()));
@@ -100,7 +101,7 @@ load_single_structure(const std::string &id, const std::string &directory, bool 
         auto pos = id.find(':');
         auto pdbid = id.substr(0, pos);
         auto chain = id.substr(pos + 1);
-        std::string path = directory + "/" + to_lower(pdbid) + CIF_SUFFIX;
+        path = directory + "/" + to_lower(pdbid) + CIF_SUFFIX;
         std::string chain_id = "/0/" + chain;
         auto rc = s->getStructure(path.c_str(), chain_id.c_str(), -1, false);
         if (rc) {
@@ -108,7 +109,7 @@ load_single_structure(const std::string &id, const std::string &directory, bool 
         }
     }
 #ifndef NDEBUG
-    std::cerr << "Loaded: " << id << " from: " << ss.str() << std::endl;
+    std::cerr << "Loaded: " << id << " from: " << path << std::endl;
 #endif
     s->prepareStructure(7.0);
 
