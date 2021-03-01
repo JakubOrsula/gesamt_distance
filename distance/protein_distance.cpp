@@ -51,8 +51,6 @@ load_single_structure(const std::string &id, const std::string &directory, bool 
 
     auto s = std::make_shared<gsmt::Structure>();
 
-    std::stringstream ss;
-
 /* Handle query objects */
     if (id[0] == '_') {
         auto new_id = id.substr(1);
@@ -61,28 +59,22 @@ load_single_structure(const std::string &id, const std::string &directory, bool 
         auto chain = new_id.substr(pos + 1);
 
         if (binary) {
-            ss << QUERIES_DIRECTORY << "/" << "query" << dir << "/" << "query:" << chain << ".bin";
-
-            file.assign(ss.str().c_str());
+            std::string path = std::string(QUERIES_DIRECTORY) + "/query" + dir + "/query" + chain + ".bin";
+            file.assign(path.c_str());
             if (not file.exists()) {
-                std::stringstream ss2;
-                ss2 << "Cannot open binary query file: " << file.FileName();
-                throw std::runtime_error(ss2.str());
+                throw std::runtime_error("Cannot open binary query file: " + std::string(file.FileName()));
             }
             if (not file.reset(true)) {
-                std::stringstream ss2;
-                ss2 << "Cannot read from binary query file: " << file.FileName();
-                throw std::runtime_error(ss2.str());
+                throw std::runtime_error("Cannot read from binary query file: " + std::string(file.FileName()));
             }
             s->read(file);
             file.shut();
         } else {
-            ss << QUERIES_DIRECTORY << "/" << "query" << dir << "/" << "query";
-            auto rc = s->getStructure(ss.str().c_str(), chain.c_str(), -1, false);
+            std::string path = std::string(QUERIES_DIRECTORY) + "/query" + dir + "/query";
+            std::string chain_id = "/0/" + chain;
+            auto rc = s->getStructure(path.c_str(), chain_id.c_str(), -1, false);
             if (rc) {
-                std::stringstream ss2;
-                ss2 << "Cannot open raw query file " << ss.str();
-                throw std::runtime_error(ss2.str());
+                throw std::runtime_error("Cannot open raw query file: " + path);
             }
         }
         s->prepareStructure(7.0);
@@ -94,17 +86,13 @@ load_single_structure(const std::string &id, const std::string &directory, bool 
     }
 
     if (binary) {
-        ss << directory << "/" << to_lower(id.substr(0, 2)) << "/" << id << ".bin";
-        file.assign(ss.str().c_str());
+        std::string path = directory + "/" + to_lower(id.substr(0, 2)) + "/" + id + ".bin";
+        file.assign(path.c_str());
         if (not file.exists()) {
-            std::stringstream ss2;
-            ss2 << "Cannot open binary file: " << file.FileName();
-            throw std::runtime_error(ss2.str());
+            throw std::runtime_error("Cannot open binary file: " + std::string(file.FileName()));
         }
         if (not file.reset(true)) {
-            std::stringstream ss2;
-            ss2 << "Cannot read from binary file: " << file.FileName();
-            throw std::runtime_error(ss2.str());
+            throw std::runtime_error("Cannot read from binary file: " + std::string(file.FileName()));
         }
         s->read(file);
         file.shut();
@@ -112,12 +100,11 @@ load_single_structure(const std::string &id, const std::string &directory, bool 
         auto pos = id.find(':');
         auto pdbid = id.substr(0, pos);
         auto chain = id.substr(pos + 1);
-        ss << directory << "/" << to_lower(pdbid) << CIF_SUFFIX;
-        auto rc = s->getStructure(ss.str().c_str(), chain.c_str(), -1, false);
+        std::string path = directory + "/" + to_lower(pdbid) + CIF_SUFFIX;
+        std::string chain_id = "/0/" + chain;
+        auto rc = s->getStructure(path.c_str(), chain_id.c_str(), -1, false);
         if (rc) {
-            std::stringstream ss2;
-            ss2 << "Cannot open raw file " << ss.str();
-            throw std::runtime_error(ss2.str());
+            throw std::runtime_error("Cannot open raw file " + path);
         }
     }
 #ifndef NDEBUG
@@ -137,9 +124,7 @@ void init_library(const std::string &archive_directory, const std::string &prelo
     std::vector<std::string> structure_ids;
     std::ifstream file(preload_list_filename);
     if (not file.is_open()) {
-        std::stringstream ss;
-        ss << "INIT: Cannot read preload list from file: " << preload_list_filename;
-        throw std::runtime_error(ss.str());
+        throw std::runtime_error("INIT: Cannot read preload list from file: " + preload_list_filename);
     }
 
     std::string line;

@@ -34,9 +34,8 @@ std::vector<std::string> save_chains(const std::string &input_file, const std::s
             ids.emplace_back(chain_id);
 
             mmdb::io::File file;
-            std::stringstream ss;
-            ss << std::string(output_dir) << "/" << "query:" << chain_id << ".bin";
-            file.assign(ss.str().c_str());
+            std::string path = std::string(output_dir) + "/query:" + chain_id + ".bin";
+            file.assign(path.c_str());
             file.rewrite();
             structure.write(file);
             file.shut();
