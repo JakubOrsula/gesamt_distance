@@ -77,7 +77,7 @@ load_single_structure(const std::string &id, const std::string &directory, bool 
             s->read(file);
             file.shut();
         } else {
-            ss << QUERIES_DIRECTORY << "/" << dir << "/" << "query";
+            ss << QUERIES_DIRECTORY << "/" << "query" << dir << "/" << "query";
             auto rc = s->getStructure(ss.str().c_str(), chain.c_str(), -1, false);
             if (rc) {
                 std::stringstream ss2;
