@@ -7,19 +7,17 @@
 
 #include "gesamtlib/gsmt_aligner.h"
 #include "protein_distance.h"
-#include "common.h"
 
 namespace py = pybind11;
 namespace fs = std::filesystem;
 using namespace pybind11::literals;
 
 
-std::vector<std::string> save_chains(const std::string &input_file, const std::string &output_dir) {
+std::vector<std::tuple<std::string, int>> save_chains(const std::string &input_file, const std::string &output_dir, const std::string &output_name) {
     gsmt::Structure structure;
-    std::vector<std::string> ids;
+    std::vector<std::tuple<std::string, int>> ids;
     int chain_no = 0;
 
-    std::string pdb_id = to_upper(std::string(fs::path(input_file).filename()).substr(0, 4));
     while (true) {
         auto rc = structure.getStructure(input_file.c_str(), nullptr, chain_no, false);
         if (rc) {
@@ -31,10 +29,10 @@ std::vector<std::string> save_chains(const std::string &input_file, const std::s
 
         if (n_atoms >= seg_length_default) {
             std::string chain_id = atom[0]->GetChainID();
-            ids.emplace_back(chain_id);
+            ids.emplace_back(chain_id, n_atoms);
 
             mmdb::io::File file;
-            std::string path = std::string(output_dir) + "/query:" + chain_id + ".bin";
+            std::string path = std::string(output_dir) + "/" + output_name + ":" + chain_id + ".bin";
             file.assign(path.c_str());
             file.rewrite();
             structure.write(file);
@@ -131,7 +129,7 @@ PYBIND11_MODULE(python_distance, m) {
             .value("DISSIMILAR", status::RESULT_DISSIMILAR)
             .value("TIMEOUT", status::RESULT_TIMEOUT);
 
-    m.def("save_chains", &save_chains, "input_file"_a, "output_dir"_a, "Save chains from query protein");
+    m.def("save_chains", &save_chains, "input_file"_a, "output_dir"_a, "output_name"_a, "Save chains from query protein");
     m.def("init_library", &init_library, "archive_directory"_a, "preload_list"_a, "binary_archive"_a,
           "approximation_threshold"_a, "cache_size"_a, "Initialize the library");
     m.def("get_distance", &get_distance, "id1"_a, "id2"_a, "time_threshold"_a, "Compute distance between two objects");
