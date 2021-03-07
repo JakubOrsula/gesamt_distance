@@ -14,7 +14,6 @@
 
 static const int LRU_CACHE_SIZE = 600;
 
-static MYSQL *conn = nullptr;
 
 JNIEXPORT void JNICALL Java_messif_distance_impl_ProteinNativeQScoreDistance_init(JNIEnv *env, jclass,
                                                                                   jstring j_directory, jstring j_list,
@@ -63,18 +62,6 @@ JNIEXPORT void JNICALL Java_messif_distance_impl_ProteinNativeQScoreDistance_ini
     env->ReleaseStringChars(j_directory, nullptr);
     env->ReleaseStringChars(j_list, nullptr);
 
-    conn = mysql_init(nullptr);
-    if (conn == nullptr) {
-        jclass Exception = env->FindClass("java/lang/RuntimeException");
-        env->ThrowNew(Exception, mysql_error(conn));
-        return;
-    }
-
-    if (mysql_real_connect(conn, "localhost", DB_USER, DB_PASS, DB_NAME, 0, nullptr, 0)) {
-        jclass Exception = env->FindClass("java/lang/RuntimeException");
-        env->ThrowNew(Exception, mysql_error(conn));
-        return;
-    }
 }
 
 
@@ -115,7 +102,7 @@ Java_messif_distance_impl_ProteinNativeQScoreDistance_getNativeDistance(JNIEnv *
 
 #ifndef NDEBUG
     std::cerr << "JNI: Computing distance between " << id1 << " and " << id2 << " using time threshold of "
-              << timeThresholdInSeconds << "; storing into DB: " << storeResults << std::endl;
+              << timeThresholdInSeconds << "; storing into DB: " << std::to_string(bool(storeResults)) << std::endl;
 #endif
 
     auto SD = std::make_unique<gsmt::Superposition>();
@@ -143,7 +130,21 @@ Java_messif_distance_impl_ProteinNativeQScoreDistance_getNativeDistance(JNIEnv *
     }
 
     if (storeResults) {
-        std::string query = "INSERT INTO queriesNearestNeighboursStats VALUES (NULL, \"" + id1 + "\", " + id2 + "\", " +
+        MYSQL *conn = mysql_init(nullptr);
+        if (conn == nullptr) {
+            jclass Exception = env->FindClass("java/lang/RuntimeException");
+            env->ThrowNew(Exception, mysql_error(conn));
+            return -1;
+        }
+
+        if (mysql_real_connect(conn, "localhost", DB_USER, DB_PASS, DB_NAME, 0, nullptr, 0) == nullptr) {
+            jclass Exception = env->FindClass("java/lang/RuntimeException");
+            env->ThrowNew(Exception, mysql_error(conn));
+            mysql_close(conn);
+            return -1;
+        }
+
+        std::string query = "INSERT IGNORE INTO queriesNearestNeighboursStats VALUES (NULL, \"" + id1 + "\", \"" + id2 + "\", " +
                             std::to_string(SD->Q) + ", " + std::to_string(SD->rmsd) + ", " + std::to_string(SD->Nalgn) +
                             ", " + std::to_string(SD->seqId) + ")";
 
@@ -154,8 +155,10 @@ Java_messif_distance_impl_ProteinNativeQScoreDistance_getNativeDistance(JNIEnv *
         if (mysql_query(conn, query.c_str())) {
             jclass Exception = env->FindClass("java/lang/RuntimeException");
             env->ThrowNew(Exception, mysql_error(conn));
+            mysql_close(conn);
             return -1;
         }
+        mysql_close(conn);
     }
 
     return qscore;
