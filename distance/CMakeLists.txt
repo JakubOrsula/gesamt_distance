@@ -14,7 +14,7 @@ target_link_libraries(protein_distance gesamtlib stdc++fs)
 add_library(ProteinDistance SHARED ProteinNativeQScoreDistance.h ProteinNativeQScoreDistance.cpp protein_distance.h)
 target_include_directories(ProteinDistance PUBLIC ${PROJECT_BINARY_DIR}/distance)
 target_include_directories(ProteinDistance PUBLIC ${JNI_INCLUDE_DIRS})
-target_link_libraries(ProteinDistance protein_distance)
+target_link_libraries(ProteinDistance protein_distance mysqlclient)
 install(TARGETS ProteinDistance DESTINATION lib)
 
 add_executable(calculate_matrix calculate_matrix.cpp)

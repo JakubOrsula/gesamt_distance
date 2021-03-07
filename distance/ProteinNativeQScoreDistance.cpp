@@ -4,14 +4,17 @@
 
 #include <string>
 #include <iostream>
-#include <sstream>
+#include <mysql/mysql.h>
 
+#include "config.h"
 #include "protein_distance.h"
 
 #include "ProteinNativeQScoreDistance.h"
 
 
 static const int LRU_CACHE_SIZE = 600;
+
+static MYSQL *conn = nullptr;
 
 JNIEXPORT void JNICALL Java_messif_distance_impl_ProteinNativeQScoreDistance_init(JNIEnv *env, jclass,
                                                                                   jstring j_directory, jstring j_list,
@@ -32,7 +35,8 @@ JNIEXPORT void JNICALL Java_messif_distance_impl_ProteinNativeQScoreDistance_ini
 
     if (j_threshold < 0 or j_threshold > 1) {
         jclass Exception = env->FindClass("java/lang/IllegalArgumentException");
-        const std::string message = "Approximative threshold of " + std::to_string(j_threshold) + " has to be between 0 and 1";
+        const std::string message =
+                "Approximative threshold of " + std::to_string(j_threshold) + " has to be between 0 and 1";
         const char *c_message = message.c_str();
         env->ThrowNew(Exception, c_message);
         return;
@@ -48,7 +52,8 @@ JNIEXPORT void JNICALL Java_messif_distance_impl_ProteinNativeQScoreDistance_ini
 #endif
 
     try {
-        init_library(std::string(c_directory), std::string(c_list), static_cast<bool>(j_binary), j_threshold, LRU_CACHE_SIZE);
+        init_library(std::string(c_directory), std::string(c_list), static_cast<bool>(j_binary), j_threshold,
+                     LRU_CACHE_SIZE);
     }
     catch (std::exception &e) {
         jclass Exception = env->FindClass("java/lang/RuntimeException");
@@ -57,6 +62,19 @@ JNIEXPORT void JNICALL Java_messif_distance_impl_ProteinNativeQScoreDistance_ini
 
     env->ReleaseStringChars(j_directory, nullptr);
     env->ReleaseStringChars(j_list, nullptr);
+
+    conn = mysql_init(nullptr);
+    if (conn == nullptr) {
+        jclass Exception = env->FindClass("java/lang/RuntimeException");
+        env->ThrowNew(Exception, mysql_error(conn));
+        return;
+    }
+
+    if (mysql_real_connect(conn, "localhost", DB_USER, DB_PASS, DB_NAME, 0, nullptr, 0)) {
+        jclass Exception = env->FindClass("java/lang/RuntimeException");
+        env->ThrowNew(Exception, mysql_error(conn));
+        return;
+    }
 }
 
 
@@ -79,7 +97,8 @@ Java_messif_distance_impl_ProteinNativeQScoreDistance_getNativeDistance(JNIEnv *
 
     if (timeThresholdInSeconds > 3600) {
         jclass Exception = env->FindClass("java/lang/IllegalArgumentException");
-        const std::string message = "Time threshold of " + std::to_string(timeThresholdInSeconds) + " is higher than allowed (3600 s)";
+        const std::string message =
+                "Time threshold of " + std::to_string(timeThresholdInSeconds) + " is higher than allowed (3600 s)";
         const char *c_message = message.c_str();
         env->ThrowNew(Exception, c_message);
         return -1;
@@ -96,14 +115,48 @@ Java_messif_distance_impl_ProteinNativeQScoreDistance_getNativeDistance(JNIEnv *
 
 #ifndef NDEBUG
     std::cerr << "JNI: Computing distance between " << id1 << " and " << id2 << " using time threshold of "
-              << timeThresholdInSeconds << std::endl;
+              << timeThresholdInSeconds << "; storing into DB: " << storeResults << std::endl;
 #endif
+
+    auto SD = std::make_unique<gsmt::Superposition>();
+    float qscore;
     try {
-        return get_distance(id1, id2, timeThresholdInSeconds);
+        auto status = run_computation(id1, id2, timeThresholdInSeconds, SD);
+        switch (status) {
+            case RESULT_OK:
+                qscore = 1 - static_cast<float>(SD->Q);
+                break;
+            case RESULT_DISSIMILAR:
+                qscore = 2;
+                break;
+            case RESULT_TIMEOUT:
+                qscore = 3;
+                break;
+            default:
+                throw std::runtime_error("Internal error.");
+        }
     }
     catch (std::exception &e) {
         jclass Exception = env->FindClass("java/lang/RuntimeException");
         env->ThrowNew(Exception, e.what());
         return -1;
     }
+
+    if (storeResults) {
+        std::string query = "INSERT INTO queriesNearestNeighboursStats VALUES (NULL, \"" + id1 + "\", " + id2 + "\", " +
+                            std::to_string(SD->Q) + ", " + std::to_string(SD->rmsd) + ", " + std::to_string(SD->Nalgn) +
+                            ", " + std::to_string(SD->seqId) + ")";
+
+#ifndef NDEBUG
+        std::cerr << "DB query: " << query << std::endl;
+#endif
+
+        if (mysql_query(conn, query.c_str())) {
+            jclass Exception = env->FindClass("java/lang/RuntimeException");
+            env->ThrowNew(Exception, mysql_error(conn));
+            return -1;
+        }
+    }
+
+    return qscore;
 }
