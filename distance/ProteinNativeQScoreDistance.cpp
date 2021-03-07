@@ -62,7 +62,8 @@ JNIEXPORT void JNICALL Java_messif_distance_impl_ProteinNativeQScoreDistance_ini
 
 JNIEXPORT jfloat JNICALL
 Java_messif_distance_impl_ProteinNativeQScoreDistance_getNativeDistance(JNIEnv *env, jobject, jstring o1id,
-                                                                        jstring o2id, jfloat timeThresholdInSeconds) {
+                                                                        jstring o2id, jfloat timeThresholdInSeconds,
+                                                                        jboolean storeResults) {
 
     if (o1id == nullptr) {
         jclass Exception = env->FindClass("java/lang/NullPointerException");

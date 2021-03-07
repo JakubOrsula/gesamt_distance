@@ -20,10 +20,10 @@ JNIEXPORT void JNICALL Java_messif_distance_impl_ProteinNativeQScoreDistance_ini
 /*
  * Class:     messif_distance_impl_ProteinNativeQScoreDistance
  * Method:    getNativeDistance
- * Signature: (Ljava/lang/String;Ljava/lang/String;F)F
+ * Signature: (Ljava/lang/String;Ljava/lang/String;FZ)F
  */
 JNIEXPORT jfloat JNICALL Java_messif_distance_impl_ProteinNativeQScoreDistance_getNativeDistance
-  (JNIEnv *, jobject, jstring, jstring, jfloat);
+  (JNIEnv *, jobject, jstring, jstring, jfloat, jboolean);
 
 #ifdef __cplusplus
 }
