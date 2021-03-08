@@ -102,7 +102,7 @@ load_single_structure(const std::string &id, const std::string &directory, bool 
         auto pdbid = id.substr(0, pos);
         auto chain = id.substr(pos + 1);
         path = directory + "/" + to_lower(pdbid) + CIF_SUFFIX;
-        std::string chain_id = "/0/" + chain;
+        std::string chain_id = "/1/" + chain;
         auto rc = s->getStructure(path.c_str(), chain_id.c_str(), -1, false);
         if (rc) {
             throw std::runtime_error("Cannot open raw file " + path);
