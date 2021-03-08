@@ -72,7 +72,7 @@ load_single_structure(const std::string &id, const std::string &directory, bool 
             file.shut();
         } else {
             path = std::string(QUERIES_DIRECTORY) + "/query" + dir + "/query";
-            std::string chain_id = "/0/" + chain;
+            std::string chain_id = "/1/" + chain;
             auto rc = s->getStructure(path.c_str(), chain_id.c_str(), -1, false);
             if (rc) {
                 throw std::runtime_error("Cannot open raw query file: " + path);
