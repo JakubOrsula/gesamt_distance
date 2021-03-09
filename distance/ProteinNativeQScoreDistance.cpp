@@ -4,6 +4,7 @@
 
 #include <string>
 #include <iostream>
+#include <chrono>
 #include <mysql/mysql.h>
 
 #include "config.h"
@@ -105,6 +106,8 @@ Java_messif_distance_impl_ProteinNativeQScoreDistance_getNativeDistance(JNIEnv *
               << timeThresholdInSeconds << "; storing into DB: " << std::to_string(bool(storeResults)) << std::endl;
 #endif
 
+
+    auto begin = std::chrono::high_resolution_clock::now();
     auto SD = std::make_unique<gsmt::Superposition>();
     float qscore;
     try {
@@ -129,6 +132,9 @@ Java_messif_distance_impl_ProteinNativeQScoreDistance_getNativeDistance(JNIEnv *
         return -1;
     }
 
+    auto end = std::chrono::high_resolution_clock::now();
+    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin);
+
     if (storeResults) {
         MYSQL *conn = mysql_init(nullptr);
         if (conn == nullptr) {
@@ -144,7 +150,8 @@ Java_messif_distance_impl_ProteinNativeQScoreDistance_getNativeDistance(JNIEnv *
             return -1;
         }
 
-        std::string query = "INSERT IGNORE INTO queriesNearestNeighboursStats VALUES (NULL, \"" + id1 + "\", \"" + id2 + "\", " +
+        std::string query = "INSERT IGNORE INTO queriesNearestNeighboursStats VALUES (" +
+                            std::to_string(elapsed.count()) + ", NULL, \"" + id1 + "\", \"" + id2 + "\", " +
                             std::to_string(SD->Q) + ", " + std::to_string(SD->rmsd) + ", " + std::to_string(SD->Nalgn) +
                             ", " + std::to_string(SD->seqId) + ")";
 
