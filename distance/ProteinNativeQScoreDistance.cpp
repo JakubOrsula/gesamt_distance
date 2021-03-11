@@ -63,6 +63,11 @@ JNIEXPORT void JNICALL Java_messif_distance_impl_ProteinNativeQScoreDistance_ini
     env->ReleaseStringChars(j_directory, nullptr);
     env->ReleaseStringChars(j_list, nullptr);
 
+    if (mysql_library_init(0, nullptr, nullptr)) {
+        jclass Exception = env->FindClass("java/lang/RuntimeException");
+        env->ThrowNew(Exception, "MYSQL init library failed");
+        return;
+    }
 }
 
 
@@ -135,7 +140,7 @@ Java_messif_distance_impl_ProteinNativeQScoreDistance_getNativeDistance(JNIEnv *
     auto end = std::chrono::high_resolution_clock::now();
     auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin);
 
-    if (storeResults) {
+    if (storeResults and elapsed.count() > 1000) {
         MYSQL *conn = mysql_init(nullptr);
         if (conn == nullptr) {
             jclass Exception = env->FindClass("java/lang/RuntimeException");
