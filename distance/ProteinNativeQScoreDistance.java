@@ -33,6 +33,8 @@ public class ProteinNativeQScoreDistance implements DistanceFunc<String>, Metric
     private static native void init(String archiveDirectory, String preloadList, boolean binaryArchive, double inherentApprox);
 
     private native float getNativeDistance(String id1, String id2, float timeThresholdInSeconds, boolean storeLongToCache);
+
+    private native double[] getStats(String id1, String id2);
     
     /**
      *

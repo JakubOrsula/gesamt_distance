@@ -70,6 +70,62 @@ JNIEXPORT void JNICALL Java_messif_distance_impl_ProteinNativeQScoreDistance_ini
     }
 }
 
+JNIEXPORT jdoubleArray JNICALL
+Java_messif_distance_impl_ProteinNativeQScoreDistance_getStats(JNIEnv *env, jobject, jstring o1id, jstring o2id) {
+    if (o1id == nullptr) {
+        jclass Exception = env->FindClass("java/lang/NullPointerException");
+        env->ThrowNew(Exception, "First object not specified");
+        return {};
+    }
+
+    if (o2id == nullptr) {
+        jclass Exception = env->FindClass("java/lang/NullPointerException");
+        env->ThrowNew(Exception, "Second object not specified");
+        return {};
+    }
+
+    const char *o1s = env->GetStringUTFChars(o1id, nullptr);
+    const char *o2s = env->GetStringUTFChars(o2id, nullptr);
+
+    std::string id1 = std::string(o1s);
+    std::string id2 = std::string(o2s);
+
+    env->ReleaseStringChars(o1id, nullptr);
+    env->ReleaseStringChars(o1id, nullptr);
+
+#ifndef NDEBUG
+    std::cerr << "JNI: Computing distance between " << id1 << " and " << id2 << std::endl;
+#endif
+
+    auto SD = std::make_unique<gsmt::Superposition>();
+
+    double native_result[] = {-1.0, -1.0, -1.0, -1.0};
+    jdoubleArray result = env->NewDoubleArray(4);
+    try {
+        auto status = run_computation(id1, id2, -1, SD);
+        switch (status) {
+            case RESULT_OK:
+                native_result[0] = SD->Q;
+                native_result[1] = SD->rmsd;
+                native_result[2] = SD->seqId;
+                native_result[3] = double(SD->Nalgn);
+                break;
+            case RESULT_DISSIMILAR:
+                break;
+            default:
+                throw std::runtime_error("Internal error.");
+        }
+    } catch (std::exception &e) {
+        jclass Exception = env->FindClass("java/lang/RuntimeException");
+        env->ThrowNew(Exception, e.what());
+        return {};
+    }
+
+    env->SetDoubleArrayRegion(result, 0, 4, native_result);
+
+    return result;
+}
+
 
 JNIEXPORT jfloat JNICALL
 Java_messif_distance_impl_ProteinNativeQScoreDistance_getNativeDistance(JNIEnv *env, jobject, jstring o1id,
