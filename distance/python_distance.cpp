@@ -71,16 +71,11 @@ int prepare_aligned_PDBs(const std::string &id1, const std::string &id2, const s
     auto M2 = s2->getSelectedStructure(mmdb::STYPE_CHAIN);
     M2->ApplyTransform(SD->T);
 
-    std::stringstream ss;
-    ss << output_dir << "/" << "query.pdb";
+    std::string query_pdb = output_dir + "/query.pdf";
+    M1->WritePDBASCII(query_pdb.c_str());
 
-    M1->WritePDBASCII(ss.str().c_str());
-
-    ss.str("");
-    ss.clear();
-    ss << output_dir << "/" << id2 << ".aligned.pdb";
-
-    M2->WritePDBASCII(ss.str().c_str());
+    std::string other_pdb = output_dir + "/" + id2 + ".aligned.pdb";
+    M2->WritePDBASCII(other_pdb.c_str());
 
     delete M1;
     delete M2;
