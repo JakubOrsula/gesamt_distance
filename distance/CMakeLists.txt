@@ -34,10 +34,10 @@ target_link_libraries(test_parallel ProteinDistance)
 add_executable(create_binary_archive create_binary_archive.cpp common.h)
 target_link_libraries(create_binary_archive gesamtlib)
 
-add_jar(java_distance TestJava.java INCLUDE_JARS proteins-1.1.jar ENTRY_POINT TestJava)
+add_jar(java_distance TestJava.java INCLUDE_JARS proteins-1.0.jar ENTRY_POINT TestJava)
 add_dependencies(java_distance ProteinDistance)
 install_jar(java_distance DESTINATION lib)
-install(FILES proteins-1.1.jar DESTINATION lib)
+install(FILES proteins-1.0.jar DESTINATION lib)
 
 add_jar(get_candidates GetCandidates.java ENTRY_POINT GetCandidates)
 install_jar(get_candidates DESTINATION lib)
