@@ -12,11 +12,10 @@ extern "C" {
 /*
  * Class:     messif_distance_impl_ProteinNativeQScoreDistance
  * Method:    init
- * Signature: (Ljava/lang/String;Ljava/lang/String;ZD)V
+ * Signature: (Ljava/lang/String;D)V
  */
 JNIEXPORT void JNICALL Java_messif_distance_impl_ProteinNativeQScoreDistance_init
-  (JNIEnv *, jclass, jstring, jstring, jboolean, jdouble);
-
+  (JNIEnv *, jclass, jstring, jdouble);
 
 /*
  * Class:     messif_distance_impl_ProteinNativeQScoreDistance
@@ -24,7 +23,7 @@ JNIEXPORT void JNICALL Java_messif_distance_impl_ProteinNativeQScoreDistance_ini
  * Signature: (Ljava/lang/String;Ljava/lang/String;)[F
  */
 JNIEXPORT jfloatArray JNICALL Java_messif_distance_impl_ProteinNativeQScoreDistance_getStats
-  (JNIEnv *, jobject, jstring, jstring);
+  (JNIEnv *, jclass, jstring, jstring);
 
 #ifdef __cplusplus
 }

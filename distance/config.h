@@ -7,7 +7,3 @@
 #define CIF_SUFFIX ".cif"
 
 #define QUERIES_DIRECTORY "/var/local/ProteinSearch/computations"
-
-#define DB_USER ""
-#define DB_PASS ""
-#define DB_NAME ""

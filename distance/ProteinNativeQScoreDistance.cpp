@@ -5,7 +5,6 @@
 #include <string>
 #include <iostream>
 
-#include "config.h"
 #include "protein_distance.h"
 
 #include "ProteinNativeQScoreDistance.h"
@@ -15,19 +14,12 @@ static const int LRU_CACHE_SIZE = 600;
 
 
 JNIEXPORT void JNICALL Java_messif_distance_impl_ProteinNativeQScoreDistance_init(JNIEnv *env, jclass,
-                                                                                  jstring j_directory, jstring j_list,
-                                                                                  jboolean j_binary,
+                                                                                  jstring j_directory,
                                                                                   jdouble j_threshold) {
 
     if (j_directory == nullptr) {
         jclass Exception = env->FindClass("java/lang/NullPointerException");
         env->ThrowNew(Exception, "No archive directory specified");
-        return;
-    }
-
-    if (j_list == nullptr) {
-        jclass Exception = env->FindClass("java/lang/NullPointerException");
-        env->ThrowNew(Exception, "No preload list specified");
         return;
     }
 
@@ -41,17 +33,14 @@ JNIEXPORT void JNICALL Java_messif_distance_impl_ProteinNativeQScoreDistance_ini
     }
 
     const char *c_directory = env->GetStringUTFChars(j_directory, nullptr);
-    const char *c_list = env->GetStringUTFChars(j_list, nullptr);
 
 #ifndef NDEBUG
     std::cerr << "JNI: Initializing the GESAMT library" << std::endl;
-    std::cerr << "JNI: Parameters: archive_dir = " << c_directory << " preload_list = " << c_list << " binary = "
-              << static_cast<bool>(j_binary) << " threshold = " << j_threshold << std::endl;
+    std::cerr << "JNI: Parameters: archive_dir = " << c_directory << " threshold = " << j_threshold << std::endl;
 #endif
 
     try {
-        init_library(std::string(c_directory), std::string(c_list), static_cast<bool>(j_binary), j_threshold,
-                     LRU_CACHE_SIZE);
+        init_library(std::string(c_directory), "/dev/null", true, j_threshold, LRU_CACHE_SIZE);
     }
     catch (std::exception &e) {
         jclass Exception = env->FindClass("java/lang/RuntimeException");
@@ -59,11 +48,10 @@ JNIEXPORT void JNICALL Java_messif_distance_impl_ProteinNativeQScoreDistance_ini
     }
 
     env->ReleaseStringChars(j_directory, nullptr);
-    env->ReleaseStringChars(j_list, nullptr);
 }
 
 JNIEXPORT jfloatArray JNICALL
-Java_messif_distance_impl_ProteinNativeQScoreDistance_getStats(JNIEnv *env, jobject, jstring o1id, jstring o2id) {
+Java_messif_distance_impl_ProteinNativeQScoreDistance_getStats(JNIEnv *env, jclass, jstring o1id, jstring o2id) {
     if (o1id == nullptr) {
         jclass Exception = env->FindClass("java/lang/NullPointerException");
         env->ThrowNew(Exception, "First object not specified");
