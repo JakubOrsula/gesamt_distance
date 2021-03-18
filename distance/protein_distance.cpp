@@ -2,17 +2,13 @@
 // Created by krab1k on 04.07.20.
 //
 
-#include <future>
 #include <string>
-#include <chrono>
 #include <vector>
 #include <memory>
 #include <fstream>
 #include <functional>
 #include <algorithm>
 #include <iostream>
-#include <sstream>
-#include <cassert>
 
 #define TBB_PREVIEW_CONCURRENT_LRU_CACHE 1
 
@@ -35,6 +31,7 @@ std::string to_lower(std::string s) {
     std::transform(s.begin(), s.end(), s.begin(), ::tolower);
     return s;
 }
+
 
 std::shared_ptr<gsmt::Structure> get_structure(const std::string &id) {
     if (not cache) {
@@ -153,30 +150,13 @@ void init_library(const std::string &archive_directory, const std::string &prelo
             (*cache)[id];
         }
     } catch (std::exception &e) {
-        std::stringstream ss;
-        ss << "INIT:Preload: " << e.what();
-        throw std::runtime_error(ss.str());
+        std::string message = "INIT:Preload" + std::string(e.what());
+        throw std::runtime_error(message);
     }
 }
 
 
-float get_distance(const std::string &id1, const std::string &id2, float time_threshold) {
-    auto SD = std::make_unique<gsmt::Superposition>();
-    auto status = run_computation(id1, id2, time_threshold, SD);
-    switch (status) {
-        case RESULT_OK:
-            return 1 - static_cast<float>(SD->Q);
-        case RESULT_DISSIMILAR:
-            return 2;
-        case RESULT_TIMEOUT:
-            return 3;
-        default:
-            throw std::runtime_error("Internal error.");
-    }
-}
-
-
-enum status run_computation(const std::string &id1, const std::string &id2, float time_threshold,
+enum status run_computation(const std::string &id1, const std::string &id2, float min_qscore,
                             std::unique_ptr<gsmt::Superposition> &SD) {
 
     if (not cache) {
@@ -190,6 +170,19 @@ enum status run_computation(const std::string &id1, const std::string &id2, floa
     gsmt::Structure *s1 = handle1.value().get();
     gsmt::Structure *s2 = handle2.value().get();
 
+    if (min_qscore != 0) {
+        auto size1 = s1->getNCalphas();
+        auto size2 = s2->getNCalphas();
+
+        if (size2 < min_qscore * size1 or size1 < min_qscore * size2) {
+#ifndef NDEBUG
+            std::cerr << "Structures " << id1 << " and " << id2 << "have sizes too different (" << size1 << ", "
+                      << size2 << ") to achieve minimum required Q-score " << min_qscore << std::endl;
+#endif
+            return RESULT_DISSIMILAR;
+        }
+    }
+
     auto Aligner = std::make_unique<gsmt::Aligner>();
     Aligner->setPerformanceLevel(gsmt::PERFORMANCE_CODE::PERFORMANCE_Efficient);
     Aligner->setSimilarityThresholds(threshold, threshold);
@@ -197,34 +190,15 @@ enum status run_computation(const std::string &id1, const std::string &id2, floa
     Aligner->setSigma(sigma_default);
 
     int matchNo;
-
     gsmt::PSuperposition SD_raw;
-    enum status ret;
-    if (time_threshold < 0) {
-        Aligner->Align(s1, s2, false);
-        Aligner->getBestMatch(SD_raw, matchNo);
-        ret = SD_raw ? RESULT_OK : RESULT_DISSIMILAR;
-    } else {
-        std::future<void> future = std::async(std::launch::async, [&] {
-            Aligner->Align(s1, s2, false);
-        });
-
-        auto timeout = static_cast<long>(time_threshold * 1000);
-        std::future_status status = future.wait_for(std::chrono::milliseconds(timeout));
-
-        if (status == std::future_status::ready) {
-            Aligner->getBestMatch(SD_raw, matchNo);
-            ret = SD_raw ? RESULT_OK : RESULT_DISSIMILAR;
-        } else {
-            Aligner->stop = true;
-            ret = RESULT_TIMEOUT;
-        }
-        future.wait();
-    }
-    if (ret == RESULT_OK) {
+    Aligner->Align(s1, s2, false);
+    Aligner->getBestMatch(SD_raw, matchNo);
+    if (SD_raw) {
         SD->CopyFrom(SD_raw);
+        return RESULT_OK;
+    } else {
+        return RESULT_DISSIMILAR;
     }
-    return ret;
 }
 
 

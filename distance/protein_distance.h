@@ -13,7 +13,6 @@
 enum status {
     RESULT_OK,
     RESULT_DISSIMILAR,
-    RESULT_TIMEOUT
 };
 
 std::shared_ptr<gsmt::Structure> load_single_structure(const std::string &id, const std::string &directory, bool binary);
@@ -24,8 +23,6 @@ void init_library(const std::string &archive_directory, const std::string &prelo
 
 void close_library();
 
-enum status run_computation(const std::string &id1, const std::string &id2, float time_threshold, std::unique_ptr<gsmt::Superposition> &SD);
-
-float get_distance(const std::string& id1, const std::string &id2, float time_threshold);
+enum status run_computation(const std::string &id1, const std::string &id2, float min_qscore, std::unique_ptr<gsmt::Superposition> &SD);
 
 std::shared_ptr<gsmt::Structure> get_structure(const std::string &id);

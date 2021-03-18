@@ -25,7 +25,7 @@ public class ProteinNativeQScoreDistance implements Serializable {
 
     private static native void init(String archiveDirectory, double inherentApprox);
 
-    private static native float[] getStats(String id1, String id2);
+    private static native float[] getStats(String id1, String id2, float scoreThreshold);
 
     /**
      * Must be called before first evaluation. Objects from specified file are
@@ -61,14 +61,15 @@ public class ProteinNativeQScoreDistance implements Serializable {
         initDistance(gesamtLibraryPath, IMPLICIT_INNER_PARAMETER_ON_SIZE_CHECK);
     }
 
-    public float[] getStatsFloats(String o1, String o2) {
+    public float[] getStatsFloats(String o1, String o2, float distThreshold) {
         if (o1 == null || o2 == null) {
             LOG.log(Level.SEVERE, "Attempt to evaluate distance between null proteins {0}, {1}.", new Object[]{o1, o2});
         }
         try {
-            float[] ret = getStats(o1, o2);
+            distThreshold = Math.min(distThreshold, 1);
+            float[] ret = getStats(o1, o2, 1 - distThreshold);
             if (o1.equals(o2)) {
-                ret[0] = 0;
+                ret[0] = 1;
             }
             return ret;
         } catch (Exception e) {

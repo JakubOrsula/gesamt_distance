@@ -4,9 +4,9 @@
 
 #include <string>
 #include <iostream>
+#include <algorithm>
 
 #include "protein_distance.h"
-
 #include "ProteinNativeQScoreDistance.h"
 
 
@@ -50,8 +50,10 @@ JNIEXPORT void JNICALL Java_messif_distance_impl_ProteinNativeQScoreDistance_ini
     env->ReleaseStringChars(j_directory, nullptr);
 }
 
+
 JNIEXPORT jfloatArray JNICALL
-Java_messif_distance_impl_ProteinNativeQScoreDistance_getStats(JNIEnv *env, jclass, jstring o1id, jstring o2id) {
+Java_messif_distance_impl_ProteinNativeQScoreDistance_getStats(JNIEnv *env, jclass, jstring o1id, jstring o2id,
+                                                               jfloat min_qscore) {
     if (o1id == nullptr) {
         jclass Exception = env->FindClass("java/lang/NullPointerException");
         env->ThrowNew(Exception, "First object not specified");
@@ -74,26 +76,28 @@ Java_messif_distance_impl_ProteinNativeQScoreDistance_getStats(JNIEnv *env, jcla
     env->ReleaseStringChars(o1id, nullptr);
 
 #ifndef NDEBUG
-    std::cerr << "JNI: Computing distance between " << id1 << " and " << id2 << std::endl;
+    std::cerr << "JNI: Computing distance between " << id1 << " and " << id2 << " with minimum required Q-score "
+              << min_qscore << std::endl;
 #endif
 
     auto SD = std::make_unique<gsmt::Superposition>();
 
-    float native_result[] = {-1.0, -1.0, -1.0, -1.0};
-    jfloatArray result = env->NewFloatArray(4);
+    float native_result[20];
+    std::fill_n(native_result, 20, -1);
+
+    jfloatArray result = env->NewFloatArray(20);
     try {
-        auto status = run_computation(id1, id2, -1, SD);
-        switch (status) {
-            case RESULT_OK:
-                native_result[0] = static_cast<float>(SD->Q);
-                native_result[1] = static_cast<float>(SD->rmsd);
-                native_result[2] = static_cast<float>(SD->seqId);
-                native_result[3] = static_cast<float>(SD->Nalgn);
-                break;
-            case RESULT_DISSIMILAR:
-                break;
-            default:
-                throw std::runtime_error("Internal error.");
+        auto status = run_computation(id1, id2, min_qscore, SD);
+        if (status == RESULT_OK) {
+            native_result[0] = static_cast<float>(SD->Q);
+            native_result[1] = static_cast<float>(SD->rmsd);
+            native_result[2] = static_cast<float>(SD->seqId);
+            native_result[3] = static_cast<float>(SD->Nalgn);
+            for (int i = 0; i < 4; i++) {
+                for (int j = 0; j < 4; j++) {
+                    native_result[4 + i * 4 + j] = static_cast<float>(SD->T[i][j]);
+                }
+            }
         }
     } catch (std::exception &e) {
         jclass Exception = env->FindClass("java/lang/RuntimeException");
@@ -101,7 +105,6 @@ Java_messif_distance_impl_ProteinNativeQScoreDistance_getStats(JNIEnv *env, jcla
         return {};
     }
 
-    env->SetFloatArrayRegion(result, 0, 4, native_result);
-
+    env->SetFloatArrayRegion(result, 0, 20, native_result);
     return result;
 }

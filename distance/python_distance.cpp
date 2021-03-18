@@ -13,6 +13,9 @@ namespace fs = std::filesystem;
 using namespace pybind11::literals;
 
 
+static const int MIN_CHAIN_LENGTH = 10;
+
+
 std::vector<std::tuple<std::string, int>> save_chains(const std::string &input_file, const std::string &output_dir, const std::string &output_name) {
     gsmt::Structure structure;
     std::vector<std::tuple<std::string, int>> ids;
@@ -27,7 +30,7 @@ std::vector<std::tuple<std::string, int>> save_chains(const std::string &input_f
         int n_atoms;
         structure.getCalphas(atom, n_atoms);
 
-        if (n_atoms >= seg_length_default) {
+        if (n_atoms >= MIN_CHAIN_LENGTH) {
             std::string chain_id = atom[0]->GetChainID();
             ids.emplace_back(chain_id, n_atoms);
 
@@ -85,7 +88,7 @@ int prepare_aligned_PDBs(const std::string &id1, const std::string &id2, const s
 
 
 std::tuple<enum status, float, float, float, int>
-get_results(const std::string &id1, const std::string &id2, const std::string &archive_dir, double size_threshold) {
+get_results(const std::string &id1, const std::string &id2, const std::string &archive_dir, double min_qscore) {
 
     auto s1 = load_single_structure(id1, archive_dir, true);
     auto s2 = load_single_structure(id2, archive_dir, true);
@@ -93,7 +96,7 @@ get_results(const std::string &id1, const std::string &id2, const std::string &a
     auto size1 = s1->getNCalphas();
     auto size2 = s2->getNCalphas();
 
-    if (size2 < size_threshold * size1 or size1 < size_threshold * size2) {
+    if (size2 < min_qscore * size1 or size1 < min_qscore * size2) {
         return std::make_tuple(RESULT_DISSIMILAR, 0, 0, 0, 0);
     }
 
@@ -121,13 +124,9 @@ PYBIND11_MODULE(python_distance, m) {
 
     py::enum_<status>(m, "Status")
             .value("OK", status::RESULT_OK)
-            .value("DISSIMILAR", status::RESULT_DISSIMILAR)
-            .value("TIMEOUT", status::RESULT_TIMEOUT);
+            .value("DISSIMILAR", status::RESULT_DISSIMILAR);
 
     m.def("save_chains", &save_chains, "input_file"_a, "output_dir"_a, "output_name"_a, "Save chains from query protein");
-    m.def("init_library", &init_library, "archive_directory"_a, "preload_list"_a, "binary_archive"_a,
-          "approximation_threshold"_a, "cache_size"_a, "Initialize the library");
-    m.def("get_distance", &get_distance, "id1"_a, "id2"_a, "time_threshold"_a, "Compute distance between two objects");
-    m.def("get_results", &get_results, "id1"_a, "id2"_a, "archive_dir"_a, "size_threshold"_a, "Get the Qscore and other metrics between two objects");
+    m.def("get_results", &get_results, "id1"_a, "id2"_a, "archive_dir"_a, "min_qscore"_a, "Get the Qscore and other metrics between two objects");
     m.def("prepare_aligned_PDBs", &prepare_aligned_PDBs, "id1"_a, "id2"_a, "archive_dir"_a, "output_dir"_a, "Prepare aligned PDBs to display");
 }
