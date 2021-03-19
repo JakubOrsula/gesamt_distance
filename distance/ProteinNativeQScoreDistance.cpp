@@ -40,7 +40,7 @@ JNIEXPORT void JNICALL Java_messif_distance_impl_ProteinNativeQScoreDistance_ini
 #endif
 
     try {
-        init_library(std::string(c_directory), "/dev/null", true, j_threshold, LRU_CACHE_SIZE);
+        init_library(std::string(c_directory), j_threshold, LRU_CACHE_SIZE);
     }
     catch (std::exception &e) {
         jclass Exception = env->FindClass("java/lang/RuntimeException");

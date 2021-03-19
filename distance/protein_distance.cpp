@@ -5,7 +5,6 @@
 #include <string>
 #include <vector>
 #include <memory>
-#include <fstream>
 #include <functional>
 #include <algorithm>
 #include <iostream>
@@ -114,24 +113,11 @@ load_single_structure(const std::string &id, const std::string &directory, bool 
 }
 
 
-void init_library(const std::string &archive_directory, const std::string &preload_list_filename, bool binary_archive,
-                  double approximation_threshold, int cache_size) {
+void init_library(const std::string &archive_directory, double approximation_threshold, int cache_size) {
     threshold = approximation_threshold;
 
-    /* Load structures' names */
-    std::vector<std::string> structure_ids;
-    std::ifstream file(preload_list_filename);
-    if (not file.is_open()) {
-        throw std::runtime_error("INIT: Cannot read preload list from file: " + preload_list_filename);
-    }
-
-    std::string line;
-    while (std::getline(file, line)) {
-        structure_ids.push_back(line);
-    }
-
     /* Fix arguments to avoid global variables */
-    auto load = [=](auto &&id) { return load_single_structure(id, archive_directory, binary_archive); };
+    auto load = [=](auto &&id) { return load_single_structure(id, archive_directory, true); };
 
     if (cache == nullptr) {
 #ifndef NDEBUG
@@ -142,16 +128,6 @@ void init_library(const std::string &archive_directory, const std::string &prelo
 #ifndef NDEBUG
         std::cerr << "INIT: already initialized before, reusing old LRU cache" << std::endl;
 #endif
-    }
-
-    try {
-        /* Preload structures */
-        for (const auto &id: structure_ids) {
-            (*cache)[id];
-        }
-    } catch (std::exception &e) {
-        std::string message = "INIT:Preload" + std::string(e.what());
-        throw std::runtime_error(message);
     }
 }
 
