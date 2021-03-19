@@ -16,7 +16,8 @@ using namespace pybind11::literals;
 static const int MIN_CHAIN_LENGTH = 10;
 
 
-std::vector<std::tuple<std::string, int>> save_chains(const std::string &input_file, const std::string &output_dir, const std::string &output_name) {
+std::vector<std::tuple<std::string, int>>
+save_chains(const std::string &input_file, const std::string &output_dir, const std::string &output_name) {
     gsmt::Structure structure;
     std::vector<std::tuple<std::string, int>> ids;
     int chain_no = 0;
@@ -48,46 +49,31 @@ std::vector<std::tuple<std::string, int>> save_chains(const std::string &input_f
 }
 
 
-int prepare_aligned_PDBs(const std::string &id1, const std::string &id2, const std::string &archive_dir,
-                         const std::string &output_dir) {
-    auto s1 = load_single_structure(id1, archive_dir, false);
-    auto s2 = load_single_structure(id2, archive_dir, false);
+int prepare_PDB(const std::string &id, const std::string &archive_dir, const std::string &output_dir,
+                const std::optional<py::list> &matrix) {
+    auto s = load_single_structure(id, archive_dir, false);
+    auto M = s->getSelectedStructure(mmdb::STYPE_CHAIN);
 
-    const double threshold = 0.0;
-
-    auto Aligner = std::make_unique<gsmt::Aligner>();
-    Aligner->setPerformanceLevel(gsmt::PERFORMANCE_CODE::PERFORMANCE_Efficient);
-    Aligner->setSimilarityThresholds(threshold, threshold);
-    Aligner->setQR0(QR0_default);
-    Aligner->setSigma(sigma_default);
-
-    int matchNo;
-    gsmt::PSuperposition SD;
-    Aligner->Align(s1.get(), s2.get(), false);
-    Aligner->getBestMatch(SD, matchNo);
-
-    if (not SD) {
-        return 1;
+    std::string output_file;
+    if (matrix.has_value()) {
+        double T[4][4];
+        for (int i = 0; i < 16; i++) {
+            auto val = matrix.value()[i].cast<double>();
+            T[i / 4][i % 4] = val;
+        }
+        M->ApplyTransform(T);
+        output_file = output_dir + "/" + id + ".aligned.pdb";
+    } else {
+        output_file = output_dir + "/query.pdb";
     }
 
-    auto M1 = s1->getSelectedStructure(mmdb::STYPE_CHAIN);
-    auto M2 = s2->getSelectedStructure(mmdb::STYPE_CHAIN);
-    M2->ApplyTransform(SD->T);
-
-    std::string query_pdb = output_dir + "/query.pdb";
-    M1->WritePDBASCII(query_pdb.c_str());
-
-    std::string other_pdb = output_dir + "/" + id2 + ".aligned.pdb";
-    M2->WritePDBASCII(other_pdb.c_str());
-
-    delete M1;
-    delete M2;
-
+    M->WritePDBASCII(output_file.c_str());
+    delete M;
     return 0;
 }
 
 
-std::tuple<enum status, float, float, float, int>
+std::tuple<enum status, float, float, float, int, std::vector<float>>
 get_results(const std::string &id1, const std::string &id2, const std::string &archive_dir, double min_qscore) {
 
     auto s1 = load_single_structure(id1, archive_dir, true);
@@ -97,7 +83,7 @@ get_results(const std::string &id1, const std::string &id2, const std::string &a
     auto size2 = s2->getNCalphas();
 
     if (size2 < min_qscore * size1 or size1 < min_qscore * size2) {
-        return std::make_tuple(RESULT_DISSIMILAR, 0, 0, 0, 0);
+        return std::make_tuple(RESULT_DISSIMILAR, 0, 0, 0, 0, std::vector<float>());
     }
 
     auto Aligner = std::make_unique<gsmt::Aligner>();
@@ -112,10 +98,17 @@ get_results(const std::string &id1, const std::string &id2, const std::string &a
     Aligner->getBestMatch(SD, matchNo);
 
     if (not SD) {
-        return std::make_tuple(RESULT_DISSIMILAR, 0, 0, 0, 0);
+        return std::make_tuple(RESULT_DISSIMILAR, 0, 0, 0, 0, std::vector<float>());
     }
 
-    return std::make_tuple(RESULT_OK, SD->Q, SD->rmsd, SD->seqId, SD->Nalgn);
+    std::vector<float> T;
+    for (auto &i : SD->T) {
+        for (double j: i) {
+            T.push_back(j);
+        }
+    }
+
+    return std::make_tuple(RESULT_OK, SD->Q, SD->rmsd, SD->seqId, SD->Nalgn, T);
 }
 
 
@@ -126,7 +119,9 @@ PYBIND11_MODULE(python_distance, m) {
             .value("OK", status::RESULT_OK)
             .value("DISSIMILAR", status::RESULT_DISSIMILAR);
 
-    m.def("save_chains", &save_chains, "input_file"_a, "output_dir"_a, "output_name"_a, "Save chains from query protein");
-    m.def("get_results", &get_results, "id1"_a, "id2"_a, "archive_dir"_a, "min_qscore"_a, "Get the Qscore and other metrics between two objects");
-    m.def("prepare_aligned_PDBs", &prepare_aligned_PDBs, "id1"_a, "id2"_a, "archive_dir"_a, "output_dir"_a, "Prepare aligned PDBs to display");
+    m.def("save_chains", &save_chains, "input_file"_a, "output_dir"_a, "output_name"_a,
+          "Save chains from query protein");
+    m.def("get_results", &get_results, "id1"_a, "id2"_a, "archive_dir"_a, "min_qscore"_a,
+          "Get the Q-score and other metrics between two objects");
+    m.def("prepare_PDB", &prepare_PDB, "id"_a, "archive_dir"_a, "output_dir"_a, "matrix"_a, "Prepare PDB file");
 }
