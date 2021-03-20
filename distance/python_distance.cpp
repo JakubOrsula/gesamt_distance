@@ -83,12 +83,12 @@ get_results(const std::string &id1, const std::string &id2, const std::string &a
     auto size2 = s2->getNCalphas();
 
     if (size2 < min_qscore * size1 or size1 < min_qscore * size2) {
-        return std::make_tuple(RESULT_DISSIMILAR, 0, 0, 0, 0, std::vector<float>());
+        return std::make_tuple(RESULT_DISSIMILAR, -1, 1, -1, -1, std::vector<float>(16, -1));
     }
 
     auto Aligner = std::make_unique<gsmt::Aligner>();
     Aligner->setPerformanceLevel(gsmt::PERFORMANCE_CODE::PERFORMANCE_Efficient);
-    Aligner->setSimilarityThresholds(0.0, 0.0);
+    Aligner->setSimilarityThresholds(0.6, 0.6);
     Aligner->setQR0(QR0_default);
     Aligner->setSigma(sigma_default);
 
@@ -98,7 +98,7 @@ get_results(const std::string &id1, const std::string &id2, const std::string &a
     Aligner->getBestMatch(SD, matchNo);
 
     if (not SD) {
-        return std::make_tuple(RESULT_DISSIMILAR, 0, 0, 0, 0, std::vector<float>());
+        return std::make_tuple(RESULT_DISSIMILAR, -1, -1, -1, -1, std::vector<float>(16, -1));
     }
 
     std::vector<float> T;
