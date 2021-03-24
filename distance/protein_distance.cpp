@@ -18,8 +18,6 @@
 #include "gesamtlib/gsmt_aligner.h"
 #include "protein_distance.h"
 
-static double threshold;
-
 typedef std::function<std::shared_ptr<gsmt::Structure>(const std::string &)> load_ft;
 typedef tbb::concurrent_lru_cache<std::string, std::shared_ptr<gsmt::Structure>, load_ft> cache_t;
 
@@ -113,8 +111,7 @@ load_single_structure(const std::string &id, const std::string &directory, bool 
 }
 
 
-void init_library(const std::string &archive_directory, double approximation_threshold, int cache_size) {
-    threshold = approximation_threshold;
+void init_library(const std::string &archive_directory, int cache_size) {
 
     /* Fix arguments to avoid global variables */
     auto load = [=](auto &&id) { return load_single_structure(id, archive_directory, true); };
@@ -132,7 +129,7 @@ void init_library(const std::string &archive_directory, double approximation_thr
 }
 
 
-enum status run_computation(const std::string &id1, const std::string &id2, float min_qscore,
+enum status run_computation(const std::string &id1, const std::string &id2, float threshold,
                             std::unique_ptr<gsmt::Superposition> &SD) {
 
     if (not cache) {
@@ -145,19 +142,6 @@ enum status run_computation(const std::string &id1, const std::string &id2, floa
 
     gsmt::Structure *s1 = handle1.value().get();
     gsmt::Structure *s2 = handle2.value().get();
-
-    if (min_qscore != 0) {
-        auto size1 = s1->getNCalphas();
-        auto size2 = s2->getNCalphas();
-
-        if (size2 < min_qscore * size1 or size1 < min_qscore * size2) {
-#ifndef NDEBUG
-            std::cerr << "Structures " << id1 << " and " << id2 << "have sizes too different (" << size1 << ", "
-                      << size2 << ") to achieve minimum required Q-score " << min_qscore << std::endl;
-#endif
-            return RESULT_DISSIMILAR;
-        }
-    }
 
     auto Aligner = std::make_unique<gsmt::Aligner>();
     Aligner->setPerformanceLevel(gsmt::PERFORMANCE_CODE::PERFORMANCE_Efficient);

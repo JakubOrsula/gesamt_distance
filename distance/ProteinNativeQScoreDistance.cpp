@@ -14,8 +14,7 @@ static const int LRU_CACHE_SIZE = 600;
 
 
 JNIEXPORT void JNICALL Java_messif_distance_impl_ProteinNativeQScoreDistance_init(JNIEnv *env, jclass,
-                                                                                  jstring j_directory,
-                                                                                  jdouble j_threshold) {
+                                                                                  jstring j_directory) {
 
     if (j_directory == nullptr) {
         jclass Exception = env->FindClass("java/lang/NullPointerException");
@@ -23,24 +22,14 @@ JNIEXPORT void JNICALL Java_messif_distance_impl_ProteinNativeQScoreDistance_ini
         return;
     }
 
-    if (j_threshold < 0 or j_threshold > 1) {
-        jclass Exception = env->FindClass("java/lang/IllegalArgumentException");
-        const std::string message =
-                "Approximative threshold of " + std::to_string(j_threshold) + " has to be between 0 and 1";
-        const char *c_message = message.c_str();
-        env->ThrowNew(Exception, c_message);
-        return;
-    }
-
     const char *c_directory = env->GetStringUTFChars(j_directory, nullptr);
 
 #ifndef NDEBUG
-    std::cerr << "JNI: Initializing the GESAMT library" << std::endl;
-    std::cerr << "JNI: Parameters: archive_dir = " << c_directory << " threshold = " << j_threshold << std::endl;
+    std::cerr << "JNI: Initializing the GESAMT library, archive_dir = " << c_directory << std::endl;
 #endif
 
     try {
-        init_library(std::string(c_directory), j_threshold, LRU_CACHE_SIZE);
+        init_library(std::string(c_directory), LRU_CACHE_SIZE);
     }
     catch (std::exception &e) {
         jclass Exception = env->FindClass("java/lang/RuntimeException");
@@ -53,7 +42,7 @@ JNIEXPORT void JNICALL Java_messif_distance_impl_ProteinNativeQScoreDistance_ini
 
 JNIEXPORT jfloatArray JNICALL
 Java_messif_distance_impl_ProteinNativeQScoreDistance_getStats(JNIEnv *env, jclass, jstring o1id, jstring o2id,
-                                                               jfloat min_qscore) {
+                                                               jfloat threshold) {
     if (o1id == nullptr) {
         jclass Exception = env->FindClass("java/lang/NullPointerException");
         env->ThrowNew(Exception, "First object not specified");
@@ -76,8 +65,8 @@ Java_messif_distance_impl_ProteinNativeQScoreDistance_getStats(JNIEnv *env, jcla
     env->ReleaseStringChars(o1id, nullptr);
 
 #ifndef NDEBUG
-    std::cerr << "JNI: Computing distance between " << id1 << " and " << id2 << " with minimum required Q-score "
-              << min_qscore << std::endl;
+    std::cerr << "JNI: Computing distance between " << id1 << " and " << id2 << " with threshold "
+              << threshold << std::endl;
 #endif
 
     auto SD = std::make_unique<gsmt::Superposition>();
@@ -87,7 +76,7 @@ Java_messif_distance_impl_ProteinNativeQScoreDistance_getStats(JNIEnv *env, jcla
 
     jfloatArray result = env->NewFloatArray(20);
     try {
-        auto status = run_computation(id1, id2, min_qscore, SD);
+        auto status = run_computation(id1, id2, threshold, SD);
         if (status == RESULT_OK) {
             native_result[0] = static_cast<float>(SD->Q);
             native_result[1] = static_cast<float>(SD->rmsd);

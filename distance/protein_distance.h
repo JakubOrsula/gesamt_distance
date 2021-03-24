@@ -18,7 +18,7 @@ enum status {
 std::shared_ptr<gsmt::Structure> load_single_structure(const std::string &id, const std::string &directory, bool binary);
 
 
-void init_library(const std::string &archive_directory, double approximation_threshold, int cache_size);
+void init_library(const std::string &archive_directory, int cache_size);
 
 void close_library();
 

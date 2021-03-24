@@ -23,9 +23,9 @@ public class ProteinNativeQScoreDistance implements Serializable {
     public static final Float IMPLICIT_INNER_PARAMETER_ON_SIZE_CHECK = 0.6f;
     private static final Logger LOG = Logger.getLogger(ProteinNativeQScoreDistance.class.getName());
 
-    private static native void init(String archiveDirectory, double inherentApprox);
+    private static native void init(String archiveDirectory);
 
-    private static native float[] getStats(String id1, String id2, float scoreThreshold);
+    private static native float[] getStats(String id1, String id2, float inherentApprox);
 
     /**
      * Must be called before first evaluation. Objects from specified file are
@@ -38,12 +38,10 @@ public class ProteinNativeQScoreDistance implements Serializable {
     public static void initDistance(String gesamtLibraryPath, float innerParameterOnSizeDiff) {
         try {
             System.loadLibrary("ProteinDistance");
-            // parameter 0.6 is inherent parametr in C library that was examined to speed-up distance evaluation
-            // while well approximating the geometric similarity of protein structures
             if (gesamtLibraryPath == null) {
-                init("/mnt/data/PDBe_clone_binary", innerParameterOnSizeDiff);
+                init("/mnt/data/PDBe_clone_binary");
             } else {
-                init(gesamtLibraryPath, innerParameterOnSizeDiff);
+                init(gesamtLibraryPath);
             }
         } catch (Exception ex) {
             LOG.log(Level.WARNING, "Initialization of the distance function not successfull.", ex);
@@ -61,6 +59,7 @@ public class ProteinNativeQScoreDistance implements Serializable {
         initDistance(gesamtLibraryPath, IMPLICIT_INNER_PARAMETER_ON_SIZE_CHECK);
     }
 
+    /* Not really up to date */
     public float[] getStatsFloats(String o1, String o2, float distThreshold) {
         if (o1 == null || o2 == null) {
             LOG.log(Level.SEVERE, "Attempt to evaluate distance between null proteins {0}, {1}.", new Object[]{o1, o2});
