@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include <memory>
+#include <filesystem>
 #include <functional>
 #include <algorithm>
 #include <iostream>
@@ -17,6 +18,9 @@
 #include "config.h"
 #include "gesamtlib/gsmt_aligner.h"
 #include "protein_distance.h"
+
+namespace fs = std::filesystem;
+
 
 typedef std::function<std::shared_ptr<gsmt::Structure>(const std::string &)> load_ft;
 typedef tbb::concurrent_lru_cache<std::string, std::shared_ptr<gsmt::Structure>, load_ft> cache_t;
@@ -42,11 +46,10 @@ std::shared_ptr<gsmt::Structure>
 load_single_structure(const std::string &id, const std::string &directory, bool binary) {
 
     mmdb::io::File file;
-
     auto s = std::make_shared<gsmt::Structure>();
-
     std::string path;
-/* Handle query objects */
+
+    /* Handle query objects */
     if (id[0] == '_') {
         auto new_id = id.substr(1);
         auto pos = new_id.find(':');
@@ -54,7 +57,8 @@ load_single_structure(const std::string &id, const std::string &directory, bool 
         auto chain = new_id.substr(pos + 1);
 
         if (binary) {
-            path = std::string(QUERIES_DIRECTORY) + "/query" + dir + "/query:" + chain + ".bin";
+            auto fs_path = fs::path(QUERIES_DIRECTORY) / ("query" + dir) / ("query:" + chain + ".bin");
+            path = fs_path.string();
             file.assign(path.c_str());
             if (not file.exists()) {
                 throw std::runtime_error("Cannot open binary query file: " + std::string(file.FileName()));
@@ -65,7 +69,8 @@ load_single_structure(const std::string &id, const std::string &directory, bool 
             s->read(file);
             file.shut();
         } else {
-            path = std::string(QUERIES_DIRECTORY) + "/query" + dir + "/query";
+            auto fs_path = fs::path(QUERIES_DIRECTORY) / ("query" + dir) / "query";
+            path = fs_path.string();
             std::string chain_id = "/1/" + chain;
             auto rc = s->getStructure(path.c_str(), chain_id.c_str(), -1, false);
             if (rc) {
@@ -80,8 +85,40 @@ load_single_structure(const std::string &id, const std::string &directory, bool 
         return s;
     }
 
+    /* Handle pivots */
+    if (id[0] == '@') {
+        if (not binary) {
+            throw std::runtime_error("Pivots must be accessed in binary mode!");
+        }
+
+        auto new_id = id.substr(1);
+        auto pos = new_id.find('_');
+        auto dir = new_id.substr(0, pos);
+        auto chain_id = new_id.substr(pos + 1);
+
+        auto fs_path = fs::path(directory) / "pivots" / dir / (chain_id + ".bin");
+        path = fs_path.string();
+
+        file.assign(path.c_str());
+        if (not file.exists()) {
+            throw std::runtime_error("Cannot open binary pivot file: " + std::string(file.FileName()));
+        }
+        if (not file.reset(true)) {
+            throw std::runtime_error("Cannot read from binary pivot file: " + std::string(file.FileName()));
+        }
+        s->read(file);
+        file.shut();
+
+#ifndef NDEBUG
+        std::cerr << "Loaded pivot object: " << id << " from : " << path << std::endl;
+#endif
+        return s;
+    }
+
+    /* Handle regular indexed objects */
     if (binary) {
-        path = directory + "/" + to_lower(id.substr(0, 2)) + "/" + id + ".bin";
+        auto fs_path = fs::path(directory) / to_lower(id.substr(1, 2)) / (id + ".bin");
+        path = fs_path.string();
         file.assign(path.c_str());
         if (not file.exists()) {
             throw std::runtime_error("Cannot open binary file: " + std::string(file.FileName()));
@@ -95,7 +132,8 @@ load_single_structure(const std::string &id, const std::string &directory, bool 
         auto pos = id.find(':');
         auto pdbid = id.substr(0, pos);
         auto chain = id.substr(pos + 1);
-        path = directory + "/" + to_lower(pdbid) + CIF_SUFFIX;
+        auto fs_path = fs::path(directory) / to_lower(id.substr(1, 2)) / (to_lower(pdbid) + CIF_SUFFIX);
+        path = fs_path.string();
         std::string chain_id = "/1/" + chain;
         auto rc = s->getStructure(path.c_str(), chain_id.c_str(), -1, false);
         if (rc) {

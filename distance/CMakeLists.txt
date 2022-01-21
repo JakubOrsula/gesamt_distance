@@ -14,9 +14,6 @@ target_include_directories(ProteinDistance PUBLIC ${JNI_INCLUDE_DIRS})
 target_link_libraries(ProteinDistance protein_distance)
 install(TARGETS ProteinDistance DESTINATION lib)
 
-add_executable(create_binary_archive create_binary_archive.cpp)
-target_link_libraries(create_binary_archive gesamtlib)
-
 pybind11_add_module(python_distance python_distance.cpp)
 target_link_libraries(python_distance PRIVATE protein_distance)
 install(TARGETS python_distance DESTINATION lib)
