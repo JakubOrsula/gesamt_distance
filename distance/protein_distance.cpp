@@ -140,9 +140,9 @@ load_single_structure(const std::string &id, const std::string &directory, bool 
             throw std::runtime_error("Cannot open raw file " + path);
         }
     }
-#ifndef NDEBUG
-    std::cerr << "Loaded: " << id << " from: " << path << std::endl;
-#endif
+//#ifndef NDEBUG
+//    std::cerr << "Loaded: " << id << " from: " << path << std::endl;
+//#endif
     s->prepareStructure(7.0);
 
     return s;

@@ -13,7 +13,7 @@
 static const int LRU_CACHE_SIZE = 600;
 
 
-JNIEXPORT void JNICALL Java_messif_distance_impl_ProteinNativeQScoreDistance_init(JNIEnv *env, jclass,
+JNIEXPORT void JNICALL Java_com_example_services_distance_ProteinNativeQScoreDistance_init(JNIEnv *env, jclass,
                                                                                   jstring j_directory) {
 
     if (j_directory == nullptr) {
@@ -41,7 +41,7 @@ JNIEXPORT void JNICALL Java_messif_distance_impl_ProteinNativeQScoreDistance_ini
 
 
 JNIEXPORT jfloatArray JNICALL
-Java_messif_distance_impl_ProteinNativeQScoreDistance_getStats(JNIEnv *env, jclass, jstring o1id, jstring o2id,
+Java_com_example_services_distance_ProteinNativeQScoreDistance_getStats(JNIEnv *env, jclass, jstring o1id, jstring o2id,
                                                                jfloat threshold) {
     if (o1id == nullptr) {
         jclass Exception = env->FindClass("java/lang/NullPointerException");
@@ -64,10 +64,10 @@ Java_messif_distance_impl_ProteinNativeQScoreDistance_getStats(JNIEnv *env, jcla
     env->ReleaseStringChars(o1id, nullptr);
     env->ReleaseStringChars(o1id, nullptr);
 
-#ifndef NDEBUG
-    std::cerr << "JNI: Computing distance between " << id1 << " and " << id2 << " with threshold "
-              << threshold << std::endl;
-#endif
+//#ifndef NDEBUG
+//    std::cerr << "JNI: Computing distance between " << id1 << " and " << id2 << " with threshold "
+//              << threshold << std::endl;
+//#endif
 
     auto SD = std::make_unique<gsmt::Superposition>();
 
