@@ -1,6 +1,6 @@
 find_package(JNI)
 find_package(Java)
-find_package(pybind11)
+#find_package(pybind11)
 include(UseJava)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
@@ -14,6 +14,7 @@ target_include_directories(ProteinDistance PUBLIC ${JNI_INCLUDE_DIRS})
 target_link_libraries(ProteinDistance protein_distance)
 install(TARGETS ProteinDistance DESTINATION lib)
 
-pybind11_add_module(python_distance python_distance.cpp)
-target_link_libraries(python_distance PRIVATE protein_distance)
-install(TARGETS python_distance DESTINATION lib)
+# todo make it optional, if there is pybind try to compile, or specifiable by flag
+#pybind11_add_module(python_distance python_distance.cpp)
+#target_link_libraries(python_distance PRIVATE protein_distance)
+#install(TARGETS python_distance DESTINATION lib)

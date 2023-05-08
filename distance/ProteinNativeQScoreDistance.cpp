@@ -10,7 +10,7 @@
 #include "ProteinNativeQScoreDistance.h"
 
 
-static const int LRU_CACHE_SIZE = 600;
+static const int LRU_CACHE_SIZE = 1200;
 
 
 JNIEXPORT void JNICALL Java_com_example_services_distance_ProteinNativeQScoreDistance_init(JNIEnv *env, jclass,
