@@ -507,8 +507,6 @@ bool          B;
   minMatch -= minSegLen;
   clusterID = 0;
 
-  // if race conditions are giving you trouble try adding small sleep
-  std::this_thread::sleep_for(std::chrono::milliseconds(1));
   for (i1=0;i1<nseg1;i1++)  {
       if (stop) {
           return GSMT_UserError;
