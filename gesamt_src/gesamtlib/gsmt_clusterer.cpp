@@ -25,6 +25,8 @@
 //
 
 #include <math.h>
+#include <chrono>
+#include <thread>
 
 #include "gsmt_clusterer.h"
 #include "gsmt_sortclusters.h"
@@ -505,6 +507,8 @@ bool          B;
   minMatch -= minSegLen;
   clusterID = 0;
 
+  // if race conditions are giving you trouble try adding small sleep
+  std::this_thread::sleep_for(std::chrono::milliseconds(1));
   for (i1=0;i1<nseg1;i1++)  {
       if (stop) {
           return GSMT_UserError;
@@ -515,8 +519,7 @@ bool          B;
         // identify a potential segment
         j1 = i1+1;
         j2 = i2+1;
-        // if race conditions are giving you trouble try adding small sleep
-//          std::this_thread::sleep_for(std::chrono::milliseconds(1));
+
         B  = (fabs(D1[i1+minSegLen-1][i1]-D2[i2+minSegLen-1][i2])
                <segTol);
         n  = 0;
